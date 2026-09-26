@@ -1,1 +1,1 @@
-
+MCP tools available: Laravel Boost (database_query, database_schema, search_docs, browser_logs), Context7 (query_docs, resolve_library_id), GitHub MCP (26 tools including create_pull_request), CodeGraph (v1.6.0, indexed). Skills: read-the-damn-docs, shadcn-improve (read-only audit/planner). AGENTS.md is authoritative for h-dashboard dev rules.

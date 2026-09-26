@@ -1,1 +1,3 @@
 User prefers to call the assistant "ریحانه" (Reyhane) instead of Hermes.
+§
+User is "M A", calls assistant "ریحانه" (Reyhane). Working on h-dashboard project. Current branch: reyhane. Fork: Shabakebehdasht/h-dashboard. Upstream: asgarimehdi/h-dashboard. Always sync with upstream/beta before starting work. Commit and push every change to reyhane branch. On "pr", create PR to upstream beta branch using GitHub MCP.
