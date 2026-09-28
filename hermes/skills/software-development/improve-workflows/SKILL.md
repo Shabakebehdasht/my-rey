@@ -28,6 +28,25 @@ When the improve skill's `--issues` modifier publishes plans as GitHub issues:
 - **Wrong repo name.** AGENTS.md may reference a canonical name that differs from the actual git remote. `git remote -v` is authoritative. If the primary repo has issues disabled, try the fork remote.
 - **Missing labels.** `--label 'improve-audit'` fails if the label doesn't exist. Either create it first (`gh label create improve-audit --repo owner/repo`) or omit labels entirely.
 - **Bulk issue registration (10+ plans).** Use `cronjob_manage` with `schedule: 'every 5m'` and `repeat: N` instead of creating all issues in one turn. Track progress in `plans/tracker.json` (JSON array with `done: boolean`, `plan_file`, `issue_url` fields per finding). Set `deliver` to the user's home channel for status updates.
+- **Verify every issue/PR number cited in a published body before writing it.** Numbers recalled from a summary or an earlier plan file drift from reality; `gh issue list --state all` is the only check. A wrong cross-reference is public and permanent, and nobody in-thread is obliged to catch it.
+
+## Publishing with Blanket Pre-Authorization
+
+When the user says a publish does not need their approval (e.g. "post this",
+"reply to the active threads, no confirmation needed"), do not still stop and
+ask per item — and do not spread the writes over N separate tool calls, because
+each external write is its own approval prompt and the run gets abandoned
+partway with an unknown set of landed items.
+
+1. Draft every body to disk first (`~/.hermes/cache/scratch/`), so a blocked run
+   is resumable without redoing the analysis.
+2. Execute all the writes in ONE batched call that loops internally.
+3. Report per-target status afterward: which URLs landed, which did not, where
+   the unwritten bodies are. Partial success reported as full success is worse
+   than no report.
+
+Publishing to GitHub Discussions (GraphQL only, no `gh discussion view/edit`)
+has its own mechanics — see the `github-discussions` skill.
 
 ## Subagent Audit Pattern
 
