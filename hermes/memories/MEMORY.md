@@ -11,5 +11,6 @@ MaryUI x-select defaults to optionValue='id'/optionLabel='name'. Options keyed '
 .env is gitignored; rebuild from `.env-example-github` + secrets in `.env.e2e`, override APP_URL=http://127.0.0.1:8000 and DB_DATABASE=h_dashboard, drop `secrets.` lines, verify `php artisan about --only=environment`. parse_ini_file('.env') fails (unquoted parens) — regex scan or config() instead.
 §
 Map perf fixed (adc561f): bottleneck was main-thread rendering, not server (longtask /map pan 620→52ms). Fix: circleMarker+lazy popup, icon cache, id-Map/memo depth, canvas lines, dead Livewire loadStats removed.
+OSM stack (Iran tiles/Nominatim/OSRM) is a separate public repo Shabakebehdasht/iran-osm-stack, running here in /home/runner/osm-stack. Ports 8080/8088/5000 all on 0.0.0.0 by user's choice (h-dashboard calls the last two from browser JS, so 127.0.0.1 breaks them). Nominatim still needs a rate-limit proxy (policy: max 1 req/s + User-Agent).
 §
 skill_manage create rejects descriptions >60 chars (index shows 57+'...'); put long trigger phrases in metadata.triggers + a 'When to use' body section instead.
