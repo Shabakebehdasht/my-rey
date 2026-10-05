@@ -165,7 +165,6 @@ session_reset:
   at_hour: 5
   idle_minutes: 1440
   mode: none
-custom_providers: []
 bot_peers:
   aylin:
     url: http://aylin:8642
