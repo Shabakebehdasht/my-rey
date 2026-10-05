@@ -8,3 +8,5 @@ User profile
 User commands
 When user ask to wake up "Aylin" you should run https://github.com/haileen5/my-ayl/actions/workflows/aylin.yml action
 وقتی کاربر گفت فلان کار بده به آیلین یعنی با دستور hermes peer dm aylin با آن ارتباط برقرار کن 
+When user ask to wake up "Nazila" you should run https://github.com/haileen5/my-naz/actions/workflows/nazila.yml action
+وقتی کاربر گفت فلان کار بده به نازیلا یعنی با دستور hermes peer dm nazila با آن ارتباط برقرار کن 
