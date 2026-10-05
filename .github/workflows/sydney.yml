@@ -403,16 +403,26 @@ jobs:
                    gateway_state.json .skills_prompt_snapshot.json; do
             [ -f "$H/$f" ] && cp "$H/$f" "$HDEST/"
           done
-          # Superpowers is installed fresh from obra/superpowers in step 13 —
-          # never sync it back. ~/.hermes/plugins/superpowers is itself a git
-          # repo, so cp -r + `git add hermes/` records it as a gitlink
-          # (mode 160000) with no .gitmodules. That gitlink makes the NEXT
-          # run's checkout step die in its 'Removing auth' phase:
+          # General guard — never sync back a plugin that is itself a git
+          # repo (anything installed via `hermes plugins install` is one,
+          # superpowers included). cp -r + `git add hermes/` would record
+          # such a dir as a gitlink (mode 160000) with no .gitmodules, and
+          # the NEXT run's checkout step dies in its 'Removing auth' phase:
           #   fatal: No url found for submodule path
-          #   'hermes/plugins/superpowers' in .gitmodules
-          # Removing it here also stages the deletion of the old gitlink
-          # in this sync commit.
-          rm -rf "$HDEST/plugins/superpowers"
+          #   'hermes/plugins/<name>' in .gitmodules
+          # Git-repo plugins are upstream code: re-install them in step 13
+          # (like superpowers, §4e) instead of backing them up. Plain-file
+          # plugins (no .git) sync as before. Removing a git-repo plugin
+          # here also stages the deletion of any old gitlink for it in
+          # this sync commit.
+          if [ -d "$HDEST/plugins" ]; then
+            for p in "$HDEST/plugins"/*/; do
+              if [ -e "${p}.git" ]; then
+                echo "🧹 Excluding git-repo plugin from sync: $p"
+                rm -rf "$p"
+              fi
+            done
+          fi
           echo '✅ Copied hermes dynamic state → hermes/ for backup'
 
           # 2. Copy 9router database back to repo
