@@ -1,4 +1,57 @@
 {
-  "jobs": [],
-  "updated_at": "2026-09-26T20:07:21.982300+00:00"
+  "jobs": [
+    {
+      "id": "c626de4a1468",
+      "name": "dm-memory-cleanup-4-peers",
+      "prompt": "وظیفه: به چهار همتا پیام DM بفرست و از آن ها بخواه حافظه داخلی شان را مرتب کنند.\n\nبا ابزار terminal به ترتیب زیر عمل کن:\n\n1) برای هر یک از همتاهای kylie، sonia، kimya، sevda یک پیام جداگانه بفرست:\n\n   hermes peer dm <name> \"<پیام>\"\n\n   متن <پیام> دقیقاً این است (فارسی، بین دو کوتیشن دوتایی قرار می گیرد):\n\nسلام. لطفاً حافظه داخلی ات (memory و user profile) را مرتب کن: موارد تکراری و منسوخ را حذف کن، اطلاعات نادرست یا قدیمی را اصلاح یا پاک کن، و فقط واقعیت های پایدار و درست را نگه دار. کارهای انجام شده و وضعیت موقت را در حافظه ذخیره نکن (آن ها تاریخچه ی جلسه هستند، نه حافظه). در پایان خلاصه ای کوتاه از اینکه چه چیزی حذف یا اصلاح شد برگردان.\n\n2) خروجی هر فرمان را بررسی کن. اگر همتایی در آن لحظه در دسترس نبود، حداکثر ۳ بار با فاصله ی ۲۰ ثانیه تلاش کن؛ اگر باز هم نشد، با `hermes peer list` وضعیتش را گزارش کن و به همتای بعدی برو. کل کار را متوقف نکن.\n\n3) در پاسخ نهایی (که برای کاربر ارسال می شود) فقط یک خلاصه ی کوتاه فارسی بنویس: برای هر همتا بگو پیام ارسال شد یا ناموفق بود، و هر خلاصه ای که برگشتاند را کوتاه نقل کن. هیچ توضیح اضافه ای نده.",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "once",
+        "run_at": "2026-10-05T14:53:24.853710+00:00",
+        "display": "once in 10m"
+      },
+      "schedule_display": "once in 10m",
+      "repeat": {
+        "times": 1,
+        "completed": 1
+      },
+      "enabled": false,
+      "state": "completed",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-05T14:43:24.853756+00:00",
+      "next_run_at": null,
+      "last_run_at": "2026-10-05T15:11:47.527009+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "last_failure": null,
+      "failure_streak": 0,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "100651143",
+        "chat_name": "M A",
+        "thread_id": null,
+        "user_id": "100651143",
+        "scope_id": null
+      },
+      "enabled_toolsets": null,
+      "workdir": null,
+      "run_claim": null,
+      "fire_claim": null
+    }
+  ],
+  "updated_at": "2026-10-05T15:11:47.528566+00:00"
 }
