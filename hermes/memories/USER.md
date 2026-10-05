@@ -4,3 +4,7 @@ h-dashboard project: Laravel 13.x health dashboard for hospital hardware invento
 §
 User profile
 § Wants progress visibility on long multi-step work: an initial full status report, then a terse status every 5 minutes until the task finishes (Persian, labelled sections, no filler). Reports should stop as soon as the work is complete.
+§
+User commands
+When user ask to wake up "Aylin" you should run https://github.com/haileen5/my-ayl/actions/workflows/aylin.yml action
+وقتی کاربر گفت فلان کار بده به آیلین یعنی با دستور hermes peer dm aylin با آن ارتباط برقرار کن 
