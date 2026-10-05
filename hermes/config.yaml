@@ -166,7 +166,11 @@ session_reset:
   idle_minutes: 1440
   mode: none
 bot_peers:
-  aylin:
-    url: http://aylin:8642
-  nazila:
-    url: http://nazila:8642
+  kimya:
+    url: http://kimya:8642
+  sevda:
+    url: http://sevda:8642
+  sonia:
+    url: http://sonia:8642
+  kylie:
+    url: http://kylie:8642
