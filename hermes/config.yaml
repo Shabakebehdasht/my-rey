@@ -168,3 +168,5 @@ session_reset:
 bot_peers:
   aylin:
     url: http://aylin:8642
+  nazila:
+    url: http://nazila:8642
