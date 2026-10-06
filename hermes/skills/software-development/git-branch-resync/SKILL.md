@@ -32,6 +32,15 @@ General everyday git pitfalls (nested `.git`, staging, identity) live in
 - Match state by SHA + empty diff. "Looks the same" is not a match.
 - Verify on the REMOTE, never from the local side's exit code.
 - Scope every write to the refs the user named. Sibling branches stay untouched.
+- Enumerate the refs the user named BEFORE acting and treat each as its own
+  (source, target) pair. "Make my fork's beta match upstream beta, check my branch
+  isn't behind, push mine" is THREE ref checks and up to two pushes — not one.
+  Verify and report every one of them, or say explicitly that a ref needed nothing.
+- Already-in-sync is a valid, COMPLETE outcome. When the remote already holds the
+  target SHA, do not push and do not reset. Report "identical, nothing pushed" —
+  a ceremonial push to prove you worked is noise the user then has to read past.
+- Capture a fork-head baseline (`git ls-remote --heads <remote>`) BEFORE any write,
+  so later ref movement can be attributed instead of guessed at.
 
 ## Procedure
 
@@ -62,14 +71,22 @@ General everyday git pitfalls (nested `.git`, staging, identity) live in
    fast-forward. Deleting files or hard-resetting a branch that already matches
    only destroys work.
 
-5. **If diverged: tag a safety net BEFORE anything destructive, then reset.**
+5. **Move local onto the canonical ref, choosing the least destructive form that works.**
 
    ```bash
-   git tag -f pre-reset-$(date +%Y%m%d-%H%M)
-   git reset --hard canonical/<branch>
+   git merge-base --is-ancestor HEAD canonical/<branch>   # 0 => local is AHEAD; NOT behind-only
+   git merge-base --is-ancestor canonical/<branch> HEAD   # 0 => local is behind-only => fast-forwardable
+   git tag -f pre-reset-$(date +%Y%m%d-%H%M)              # always, before either form
+   git merge --ff-only canonical/<branch>                 # preferred: fails loudly, discards nothing
+   git reset --hard canonical/<branch>                    # only when the user really wants local-only commits gone
    ```
 
-   Tag first even when you believe a fast-forward will suffice — it costs one line.
+   Prefer `merge --ff-only` when local is behind-only: it needs no destructive step and
+   it REFUSES on divergence instead of silently discarding local commits. Reach for
+   `reset --hard` only when local has commits that must actually disappear, or the
+   ff-only refuses and the user confirms dropping them. Tag first either way — one line.
+
+   Re-run step 3 afterwards: the counts must now be `0 0` and the diff empty.
 
 6. **Clear the working tree back to the tracked state**
 
@@ -139,6 +156,23 @@ since your last fetch.
 `git push` exiting 0 says the local side updated the remote ref. It does not say the
 remote content equals upstream, nor that no other branch moved. Only `ls-remote` on
 both sides proves that.
+
+### A sibling branch moving is not your push — attribute it or say nothing
+
+On a shared fork, other agents push their own branches. A ref that differs between
+your pre-push baseline and your post-push `ls-remote` may have moved by a teammate in
+between, not because of you. Never report another branch as "changed by the resync"
+without a pre-write baseline to point at. If you have no baseline, list the branches
+you deliberately pushed and leave the rest uncommented. `git fetch origin --prune` at
+the start of a turn surfaces exactly this drift — read it, do not act on it.
+
+### `--force` on the canonical fetch ref when the upstream moved
+
+If `canonical/<branch>` was fetched earlier in the session or in a prior session, a
+plain `git fetch <url> <branch>:refs/remotes/canonical/<branch>` refuses to update a
+checked-out-tracking ref that moved. Add `--force` to that FETCH (it only rewrites the
+local mirror ref, never the remote). Forgetting it leaves you comparing against a stale
+upstream SHA and declaring a synced branch out of date.
 
 ### Never switch the checkout just to compare branches
 
