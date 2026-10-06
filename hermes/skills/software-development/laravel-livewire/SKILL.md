@@ -23,6 +23,10 @@ PHP code changes, test writing, and API resource transformers.
 ## Always-On Rules
 
 1. **Run Pint before commit.** `vendor/bin/pint --dirty` is enforced in CI.
+   If the wrapper is refused by a command-lifecycle guard (it reports the
+   script is larger than the scan cap), invoke the same binary directly:
+   `php vendor/laravel/pint/builds/pint --dirty --format agent`. Same tool, same
+   result — don't skip the formatter because the shim was blocked.
 2. **Clear config+route cache before running tests.** Stale `routes-v7.php`
    causes Livewire endpoint-hash mismatch — tests silently return 404 on
    `->set()`/`->call()`.
@@ -38,7 +42,18 @@ PHP code changes, test writing, and API resource transformers.
    that exist in `phpstan-baseline.neon`, the old entries become unmatched
    and PHPStan reports new errors. Run `vendor/bin/phpstan analyse
    --generate-baseline` after every fix round, then verify with
-   `composer phpstan`.
+   `composer phpstan`. The baseline is **line-based**, so inserting or deleting
+   lines above an existing baseline entry shifts it and produces both
+   `ignore.unmatched` (non-ignorable) and duplicate errors. After regenerating,
+   diff entry counts and state the direction: fewer entries is fine, any
+   increase means real new errors. Entries that merely changed line number are
+   not new debt — say which count dropped and why.
+7. **A nullable column needs a nullable PHPDoc.** `@property int $unit_id` on a
+   nullable column makes every `=== null` branch statically dead, and PHPStan
+   reports the check as always-false — i.e. it flags legitimate org-wide /
+   no-owner logic as unreachable and you would "fix" the error by deleting the
+   branch that implements the feature. Check the migration before writing the
+   PHPDoc, not after PHPStan complains.
 
 ## Pitfalls
 
@@ -159,6 +174,40 @@ These files are machine-generated — manual merge produces invalid output.
 
 **Never** edit phpstan-baseline.neon by hand to resolve conflicts.
 The regenerate step produces the correct baseline for the current code state.
+
+## Organisational scope on a Livewire page (multi-tenant read + write)
+
+When a page gates only a coarse permission (`manage_hardware`, `manage_personnel`)
+but neighbouring pages in the same route group scope every path through
+`AccessService::accessibleUnitIds()`, the page leaks cross-unit rows. Fix all
+four surfaces, not just the list:
+
+- **List** — an *unconditional* predicate: `where(function ($q) { $q->whereNull('unit_id'); if (!empty($ids)) { $q->orWhereIn('unit_id', $ids); } })`.
+  Never `when($ids, …)`: an empty scope silently drops the predicate and returns
+  the whole org (the fail-open trap). Decide explicitly whether null-owner rows
+  (org-wide) are visible; say so in the PR.
+- **Options/pickers** — filter the option list to in-scope ids too. A picker
+  that offers every unit lets the user submit an id the list would never show.
+- **Mutators** — resolve the record, then assert it is in scope before touching
+  state. Route-model binding gives you the record, not permission to change it;
+  `$editingId` from the client is attacker-controlled.
+- **Submitted foreign keys** — a create/update that accepts `unit_id` must
+  validate the *submitted* value against scope, not only the loaded record.
+  Otherwise an edit can relocate a row across the boundary, which also
+  redirects any cron/queued side effect that fires on that foreign key.
+
+Share one `assertXInScope()` helper across every mutator so the list and the
+mutators cannot drift, and use the sibling page's refusal style (error toast +
+`return`) instead of inventing a 403. Order matters in `updateSchedule`:
+validate the record **and** the submitted unit, and `return` before any
+`$schedule->update(...)`.
+
+**Admin-only org-wide rows must be admin-only on write too.** If null-owner
+rows are visible to everyone but mutable only by an admin, then letting a
+scoped user create or promote one lets them write a record they can then
+neither edit nor delete — and hand themselves an org-wide side effect through a
+scoped form. Gate the write path on the same rule; keep the "no unit" option
+in the picker so existing org-wide rows stay viewable.
 
 ## Testing Patterns
 

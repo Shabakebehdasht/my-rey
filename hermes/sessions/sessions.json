@@ -2,9 +2,9 @@
   "_README": "LEGACY MIRROR of the gateway routing index (the primary copy lives in the gateway_routing table in ~/.hermes/state.db). Maps messaging session keys (agent:main:<platform>:...) to active session IDs. This is NOT the session list. ALL sessions (CLI, TUI, and gateway) live in ~/.hermes/state.db and are shown by `hermes sessions list` and `/sessions`. Disable this file with `gateway.write_sessions_json: false` in config.yaml.",
   "agent:main:telegram:dm:100651143": {
     "session_key": "agent:main:telegram:dm:100651143",
-    "session_id": "20261006_072048_f77e2a8b",
-    "created_at": "2026-10-06T07:20:48.179647",
-    "updated_at": "2026-10-06T08:02:56.395560",
+    "session_id": "20261006_142735_d9c2727e",
+    "created_at": "2026-10-06T14:27:35.553303",
+    "updated_at": "2026-10-06T17:06:47.618267",
     "display_name": "M A",
     "platform": "telegram",
     "chat_type": "dm",
@@ -14,7 +14,7 @@
     "cache_read_tokens": 0,
     "cache_write_tokens": 0,
     "total_tokens": 0,
-    "last_prompt_tokens": 158835,
+    "last_prompt_tokens": 138705,
     "estimated_cost_usd": 0.0,
     "cost_status": "unknown",
     "expiry_finalized": false,
@@ -46,14 +46,14 @@
       "user_name": "M A",
       "thread_id": null,
       "chat_topic": null,
-      "message_id": "1882"
+      "message_id": "2053"
     }
   },
   "agent:main:telegram:group:-1004376120571:100651143": {
     "session_key": "agent:main:telegram:group:-1004376120571:100651143",
-    "session_id": "20261006_094904_3f0cac15",
-    "created_at": "2026-10-06T09:49:04.869342",
-    "updated_at": "2026-10-06T09:49:04.869342",
+    "session_id": "20261006_171904_75a7b50e",
+    "created_at": "2026-10-06T17:19:04.097121",
+    "updated_at": "2026-10-06T17:19:04.097121",
     "display_name": "گروه تیم",
     "platform": "telegram",
     "chat_type": "group",
@@ -87,7 +87,7 @@
       "user_name": "M A",
       "thread_id": null,
       "chat_topic": null,
-      "message_id": "2578"
+      "message_id": "2705"
     }
   }
 }

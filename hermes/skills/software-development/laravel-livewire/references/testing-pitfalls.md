@@ -35,6 +35,30 @@
 | Trust a scope you just built | use it directly | `expect($scope)->not->toBeEmpty()` first — an empty scope makes every "excludes X" assertion pass for the wrong reason |
 | "Unit with zero personnel" fixture | attach the user's backing person to the unit under test | the user factory creates its backing `Person` on the **first existing** unit — create the empty unit *after* the user, or assert on a unit created later |
 | Query-count budget | guess a number | measure once, then set a bound with slack, and skip `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` when counting |
+| Want a user with genuinely empty access scope | create a user and attach it to nothing | often unconstructible — the factory auto-creates a backing `Person` and `persons.u_id` is NOT NULL, so a scope helper silently falls back to that unit. Bind a stub instead: `$this->swap(FooAccessService::class, new class extends FooAccessService { public function scope(): array { return []; } });` |
+| Seeded admin for an admin-only path | `assignRole('admin')` and stop | the seeded role does **not** carry every permission the component authorizes first — add the missing `givePermissionTo(...)` or the test 403s for an unrelated reason |
+| Assert a row is excluded from a scoped list | `Model::pluck('id')` over the whole table | query what the component renders: `Livewire::test('x')->instance()->listQuery()->pluck('id')`. A table-wide pluck proves nothing — the row must survive in the DB while being absent from the list |
+| Assert a record was not mutated/deleted | assert the absence of a toast or a `->assertHasNoErrors()` | `assertDatabaseHas` the row **with its other fields** — a refusal that still half-writes looks identical to success from the outside |
+
+## Multi-tenant scope: what makes a test honest
+
+| Scenario | Wrong | Correct |
+|---|---|---|
+| Prove scoping works | assert the foreign row is gone from the table | foreign row still in the table, absent from the component's rendered list |
+| Two units, two schedules | reuse the unit the factory already put the person's backing row in | create both units explicitly and pin each schedule to a known id |
+| Pin an admin-only branch | make the admin a superuser in the fixture | give exactly `role=admin` **plus** the permission the component authorizes |
+| Guard a picker's options | `->toContain('unit name')` | also assert the options are non-blank (`preg_match_all` on `<option>` with a non-empty label), and that the foreign unit's name is absent |
+
+### Blank options hide behind HTML-string assertions
+
+A picker built from a string-keyed collection (e.g. `->prepend('— all —', null)`)
+against a wrapper defaulting to `optionValue='id'` / `optionLabel='name'` renders
+**every** option blank, because the accessor returns null for a string key.
+Asserting the presence of a unit *name* then fails in a way that looks like a
+scoping bug. Dump the markup and look at it before theorising:
+`preg_match_all('/<select.*?<\/select>/s', $html, $m)` — `<option value="" ></option>`
+twice is the signature. Fix is `'value'`/`'label'` keys with explicit
+`option-value`/`option-label` on the component.
 
 ## E2E Test Structure
 
