@@ -146,14 +146,14 @@
     "first_seen_at": null,
     "last_patched_at": "2026-10-06T16:48:02.899171+00:00",
     "last_reused_patch_generation": 18,
-    "last_used_at": "2026-10-06T17:02:16.284515+00:00",
-    "last_viewed_at": "2026-10-06T16:48:36.052014+00:00",
+    "last_used_at": "2026-10-07T15:39:12.531166+00:00",
+    "last_viewed_at": "2026-10-07T15:39:12.530130+00:00",
     "patch_count": 18,
     "patch_generation": 18,
     "pinned": false,
     "state": "active",
-    "use_count": 23,
-    "view_count": 16
+    "use_count": 25,
+    "view_count": 18
   },
   "hermes-plugin-install": {
     "archived_at": null,
@@ -225,14 +225,14 @@
     "first_seen_at": null,
     "last_patched_at": null,
     "last_reused_patch_generation": 0,
-    "last_used_at": "2026-10-05T08:05:00.509617+00:00",
-    "last_viewed_at": "2026-10-05T08:05:00.508426+00:00",
+    "last_used_at": "2026-10-07T15:40:53.790538+00:00",
+    "last_viewed_at": "2026-10-07T15:40:53.789559+00:00",
     "patch_count": 0,
     "patch_generation": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 4,
+    "view_count": 4
   },
   "requesting-code-review": {
     "archived_at": null,
