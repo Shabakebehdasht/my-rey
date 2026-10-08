@@ -1,3 +1,4 @@
+# Managed by RemoteHermes — template v1 (regenerated on Update; manual edits are overwritten)
 name: reyhane
 
 on:
@@ -14,8 +15,6 @@ jobs:
       WF_NAME: reyhane
 
     steps:
-      # - name: Wait 10 minutes
-      #   run: sleep 600
       - name: 1. Checkout Repository
         uses: actions/checkout@v6
         with:
@@ -166,7 +165,21 @@ jobs:
       - name: 10. Build frontend assets
         run: |
           cd /home/runner/h-dashboard
-          npm run build
+          if ! npm run build; then
+            # npm's optional-dependencies bug (npm/cli#4828): after the
+            # `npm update` in step 9, the platform binding
+            # @rolldown/binding-linux-x64-gnu can be missing from
+            # node_modules and vite dies with "Cannot find native
+            # binding" (seen on my-opencode run 37746307765 — the
+            # identical build had passed 20 minutes earlier; the bug
+            # strikes nondeterministically). npm's own prescribed
+            # remedy is a clean reinstall without the stale lockfile;
+            # do exactly that, once, and rebuild.
+            echo '⚠️ Build failed — clean npm reinstall (stale-lock optional-deps bug), then rebuild'
+            rm -rf node_modules package-lock.json
+            npm install
+            npm run build
+          fi
           echo '✅ Frontend assets built'
 
       - name: 10b. Index h-dashboard with CodeGraph
@@ -195,13 +208,15 @@ jobs:
           export INITIAL_PASSWORD="${{ secrets.RUNNER_PASSWORD }}"
           # Make sure the data dir exists
           mkdir -p ~/.9router/db
-          BACKUP_DIR="${GITHUB_WORKSPACE:-.}/9router"
-          # Restore the backed-up state from the repo (committed in 9router/data.sqlite)
-          if [ -f "$BACKUP_DIR/data.sqlite" ]; then
-            cp "$BACKUP_DIR/data.sqlite" ~/.9router/db/data.sqlite
+          BACKUP_FILE="${GITHUB_WORKSPACE:-.}/9router/instances/${WF_NAME}.sqlite"
+          # Restore this instance's backed-up state from the repo
+          # (committed in 9router/instances/<wf>.sqlite — one db per
+          # instance now that syd/ayl/naz share this repo)
+          if [ -f "$BACKUP_FILE" ]; then
+            cp "$BACKUP_FILE" ~/.9router/db/data.sqlite
             echo '✅ Restored 9router data.sqlite from repo backup'
           else
-            echo '⚠️ 9router/data.sqlite not found in repo — starting fresh'
+            echo '⚠️ 9router backup for ${WF_NAME} not found in repo — starting fresh'
           fi
           # Start 9router hidden in the background (tray mode) on the default port 20128.
           # --tray is the same "hide to background" option used interactively.
@@ -232,7 +247,7 @@ jobs:
 
           # 2. Restore hermes state (config, memories, skills, cron, hooks, etc.) from repo
           mkdir -p /home/runner/.hermes
-          H="${GITHUB_WORKSPACE:-.}/hermes"
+          H="${GITHUB_WORKSPACE:-.}/hermes/instances/${WF_NAME}"
           D=/home/runner/.hermes
           for item in memories skills cron hooks platforms sessions kanban plugins; do
             [ -d "$H/$item" ] && cp -r "$H/$item" "$D/"
@@ -241,7 +256,7 @@ jobs:
                    gateway_state.json .skills_prompt_snapshot.json; do
             [ -f "$H/$f" ] && cp "$H/$f" "$D/"
           done
-          echo '✅ Restored hermes state from repo (hermes/ → ~/.hermes/)'
+          echo '✅ Restored hermes state from repo (hermes/instances/${WF_NAME}/ → ~/.hermes/)'
           # 3. Write the .env with secrets pulled from GitHub Secrets.
           #    The home channel is the same as the allowed user id (single value),
           #    so we reuse TELEGRAM_ALLOWED_USERS for TELEGRAM_HOME_CHANNEL too.
@@ -253,10 +268,11 @@ jobs:
             echo "TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}"
             echo "TELEGRAM_HOME_CHANNEL=${TELEGRAM_ALLOWED_USERS}"
             echo "GITHUB_TOKEN=${GH_TOKEN}"
-            echo "HERMES_PEER_SONIA_KEY=${HERMES_API_KEY}"
             echo "HERMES_PEER_KIMYA_KEY=${HERMES_API_KEY}"
-            echo "HERMES_PEER_SEVDA_KEY=${HERMES_API_KEY}"
             echo "HERMES_PEER_KYLIE_KEY=${HERMES_API_KEY}"
+            echo "HERMES_PEER_REBECCA_KEY=${HERMES_API_KEY}"
+            echo "HERMES_PEER_SEVDA_KEY=${HERMES_API_KEY}"
+            echo "HERMES_PEER_SONIA_KEY=${HERMES_API_KEY}"
           } > ~/.hermes/.env
           chmod 600 ~/.hermes/.env
           echo '✅ Wrote ~/.hermes/.env from secrets'
@@ -289,15 +305,18 @@ jobs:
             --connect-timeout 60 2>&1 || true
           echo '✅ GitHub MCP Server installed (26 tools: issues, PRs, code search, repos)'
 
-          #    4e. Superpowers plugin — must be INSTALLED here, not just restored.
-          #        In this repo, hermes/plugins/superpowers is only a gitlink
-          #        (mode 160000, no .gitmodules), so the restore in section 2
-          #        copies an EMPTY directory: config.yaml already lists
-          #        superpowers under plugins.enabled, but there is no
-          #        plugin.yaml / code on disk and Hermes errors on it.
-          #        Drop the empty restored dir and install from upstream.
+          #    4e. Superpowers plugin — must be INSTALLED here.
+          #        The instance backup holds no usable superpowers copy
+          #        (step 16 strips git-repo plugins from the sync — a
+          #        recorded gitlink would break the next checkout), yet
+          #        the restored config.yaml lists superpowers under
+          #        plugins.enabled: Hermes looks for a plugin that is
+          #        not on disk and errors. Install it fresh from
+          #        upstream, before the gateway starts.
           #        --enable makes it non-interactive (a plain install prompts
           #        'Enable now? [y/N]' and would hang/fail on a runner).
+          #        The rm -rf first keeps this idempotent if a partial or
+          #        empty plugins/superpowers dir is ever restored later.
           rm -rf ~/.hermes/plugins/superpowers
           hermes plugins install obra/superpowers --enable 2>&1 | tail -5 || true
           if [ ! -f ~/.hermes/plugins/superpowers/.hermes-plugin/plugin.yaml ]; then
@@ -347,7 +366,7 @@ jobs:
           #    So: (a) run a real `hermes chat -q` warmup, (b) send the RESULT.
           #    No .hermes.md is written: AGENTS.md is the authoritative
           #    instruction file for h-dashboard and .hermes.md is not wanted.
-          SEED_FILE="${GITHUB_WORKSPACE:-.}/hermes/seed-message.txt"
+          SEED_FILE="${GITHUB_WORKSPACE:-.}/hermes/instances/${WF_NAME}/seed-message.txt"
           HD_DIR=/home/runner/h-dashboard
           if [ -f "$SEED_FILE" ]; then
             sleep 3
@@ -368,7 +387,7 @@ jobs:
                 || echo '⚠️ Welcome message failed to send'
             fi
           else
-            echo '⚠️ hermes/seed-message.txt not found — skipping seed prompt'
+            echo '⚠️ hermes/instances/${WF_NAME}/seed-message.txt not found — skipping seed prompt'
           fi
 
       - name: 14. Start Laravel Development Server
@@ -377,11 +396,11 @@ jobs:
           nohup php artisan serve --host=0.0.0.0 > /dev/null 2>&1 &
           echo '✅ Laravel server started on port 8000'
 
-      - name: 15. Server Keep-Alive (5h 50m)
+      - name: 15. Server Keep-Alive (5h 40m)
         run: |
-          for i in {1..350}; do
+          for i in {1..340}; do
             sleep 60
-            echo "[$i/350] Server is active (SSH + Laravel on port 8000)..."
+            echo "[$i/340] Server is active (SSH + Laravel on port 8000)..."
           done
 
       - name: 16. Sync hermes state & 9router data back to my-rey
@@ -396,7 +415,7 @@ jobs:
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/Shabakebehdasht/my-rey.git"
 
           H=/home/runner/.hermes
-          HDEST=hermes
+          HDEST="hermes/instances/${WF_NAME}"
 
           # 1. Copy all dynamic hermes dirs & files back to repo
           mkdir -p "$HDEST"
@@ -414,11 +433,9 @@ jobs:
           # the NEXT run's checkout step dies in its 'Removing auth' phase:
           #   fatal: No url found for submodule path
           #   'hermes/plugins/<name>' in .gitmodules
-          # Git-repo plugins are upstream code: re-install them in step 13
-          # (like superpowers, §4e) instead of backing them up. Plain-file
-          # plugins (no .git) sync as before. Removing a git-repo plugin
-          # here also stages the deletion of any old gitlink for it in
-          # this sync commit.
+          # That is exactly the failure this guard prevents. Git-repo plugins are upstream
+          # code: re-install them in step 13 (like superpowers, §4e) instead
+          # of backing them up. Plain-file plugins (no .git) sync as before.
           if [ -d "$HDEST/plugins" ]; then
             for p in "$HDEST/plugins"/*/; do
               if [ -e "${p}.git" ]; then
@@ -427,20 +444,32 @@ jobs:
               fi
             done
           fi
-          echo '✅ Copied hermes dynamic state → hermes/ for backup'
+          # Generalized guard — strip ANY nested .git left anywhere in
+          # the backup, not just under plugins/ (a skill or hook cloned
+          # from a git repo carries one too): a recorded gitlink with
+          # no .gitmodules breaks the next checkout exactly the same
+          # way. Same fix as the my-opencode sync step.
+          find "$HDEST" -name .git -type d -prune -exec rm -rf {} + 2>/dev/null || true
+          find "$HDEST" -name .git -type f -delete 2>/dev/null || true
+          echo '✅ Copied hermes dynamic state → hermes/instances/${WF_NAME}/ for backup'
 
           # 2. Copy 9router database back to repo
-          mkdir -p 9router
+          mkdir -p 9router/instances
           if [ -f ~/.9router/db/data.sqlite ]; then
-            cp ~/.9router/db/data.sqlite 9router/data.sqlite
-            echo '✅ Copied 9router data.sqlite → 9router/ for backup'
+            cp ~/.9router/db/data.sqlite "9router/instances/${WF_NAME}.sqlite"
+            echo '✅ Copied 9router data.sqlite → 9router/instances/${WF_NAME}.sqlite for backup'
           fi
 
           # 3. Commit & push if anything changed
-          if git diff --quiet && git diff --cached --quiet; then
+          # Stage FIRST, then judge from the staged diff: plain `git diff`
+          # is blind to untracked files, so checking before `git add` misses
+          # a brand-new backup file/dir entirely — that is exactly the
+          # my-op1 op2 bug (2026-10-07): the step reported success in <1s
+          # and pushed nothing, and the backup died with the ephemeral runner.
+          git add -A hermes/ 9router/
+          if git diff --cached --quiet; then
             echo 'ℹ️ No changes to commit'
           else
-            git add hermes/ 9router/ 2>/dev/null || true
             git commit -m "Sync hermes state & 9router data from reyhane instance"
             # Pull first in case another run pushed before us
             git pull --rebase origin "${{ github.ref_name }}" || true
