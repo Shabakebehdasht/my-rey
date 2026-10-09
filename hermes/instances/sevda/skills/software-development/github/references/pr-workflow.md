@@ -27,17 +27,67 @@ fi
 echo "Using: $AUTH"
 ```
 
-### Extracting Owner/Repo from the Git Remote
+### Extracting Owner/Repo — push remote vs PR target are DIFFERENT repos
 
-Many `curl` commands need `owner/repo`. Extract it from the git remote:
+`gh pr create` with no `-R` targets **the repo `origin` points at**. In a
+fork-based contribution workflow `origin` is your fork, so the default opens
+the PR in your own fork, where no maintainer sees it and nothing gets merged.
+The work is correct and the PR is invisible.
+
+Push to one repo; open the PR against another. Name both explicitly:
 
 ```bash
-# Works for both HTTPS and SSH remote URLs
+# Where your branch lives (you push here)
+git remote get-url origin          # -> your fork
+
+# Where the PR must be opened (the PR lands here)
+git remote -v | grep -i upstream   # -> the canonical repo
+```
+
+If the clone has no `upstream` remote, do NOT add one to fix this — the target
+is usually stated in `AGENTS.md` or the task. Adding remotes changes repo
+config and is rarely what was asked.
+
+Open the PR with BOTH the target repo and a fork-qualified head:
+
+```bash
+gh pr create -R <upstream-owner>/<repo> \
+  --base <target-branch> \
+  --head <fork-owner>:<branch> \
+  --title "..." --body-file /tmp/pr-body.md
+```
+
+- `-R` selects the repo the PR is created **in** — the upstream/canonical one.
+- `--head forkowner:branch` is required because the branch does not exist in
+  upstream under a bare name; GitHub resolves it through the fork network.
+- A bare `--head <branch>` works only when the branch name is unique across the
+  fork network, which is ambiguous once other branches exist — qualify it.
+
+For `curl` / `gh api`, the same split applies: `POST /repos/<UPSTREAM>/pulls`
+with `"head": "<fork-owner>:<branch>"`. The `OWNER_REPO` used for the push is
+not the one used for the PR.
+
+```bash
+# For curl commands that genuinely need the push-side repo (git remote, etc.)
 REMOTE_URL=$(git remote get-url origin)
 OWNER_REPO=$(echo "$REMOTE_URL" | sed -E 's|.*github\.com[:/]||; s|\.git$||')
-OWNER=$(echo "$OWNER_REPO" | cut -d/ -f1)
-REPO=$(echo "$OWNER_REPO" | cut -d/ -f2)
-echo "Owner: $OWNER, Repo: $REPO"
+```
+
+### Confirm the PR landed in the right repo
+
+After creating it, prove the target — do not assume it:
+
+```bash
+gh pr view <N> -R <upstream> --json headRefName,baseRefName,state,url
+gh pr list -R <upstream> --head <branch>        # non-empty = it is really there
+gh pr list -R <fork> --state open               # the fork should have none
+```
+
+If it landed in the fork, close it there and reopen upstream. Closing keeps the
+commits and the branch — you do not redo the work:
+
+```bash
+gh pr close <N> -R <fork> --delete-branch=false
 ```
 
 ---
@@ -101,6 +151,7 @@ git push -u origin HEAD
 **With gh:**
 
 ```bash
+# Single-repo (you push to the same repo you open the PR in)
 gh pr create \
   --title "feat: add JWT-based user authentication" \
   --body "## Summary
@@ -113,6 +164,18 @@ gh pr create \
 Closes #42"
 ```
 
+**Fork -> upstream (the common contribution case):** always pass `-R` for the
+target and qualify the head. Omitting `-R` silently targets `origin` — your
+fork — and the PR is never seen by the maintainer.
+
+```bash
+gh pr create -R upstream-owner/repo \
+  --base beta \
+  --head your-fork-owner:fix/some-branch \
+  --title "fix: correct redirect URL after login" \
+  --body-file /tmp/pr-body.md
+```
+
 Options: `--draft`, `--reviewer user1,user2`, `--label "enhancement"`, `--base develop`
 
 **With git + curl:**
@@ -120,14 +183,17 @@ Options: `--draft`, `--reviewer user1,user2`, `--label "enhancement"`, `--base d
 ```bash
 BRANCH=$(git branch --show-current)
 
+# POST to the repo the PR must land in. For a fork contribution this is the
+# UPSTREAM repo, and "head" is qualified as "<fork-owner>:<branch>" — posting
+# to $OWNER_REPO (derived from origin) would open the PR in your own fork.
 curl -s -X POST \
   -H "Authorization: token $GITHUB_TOKEN" \
   -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/$OWNER/$REPO/pulls \
+  https://api.github.com/repos/$UPSTREAM_OWNER/$UPSTREAM_REPO/pulls \
   -d "{
     \"title\": \"feat: add JWT-based user authentication\",
     \"body\": \"## Summary\nAdds login and register API endpoints.\n\nCloses #42\",
-    \"head\": \"$BRANCH\",
+    \"head\": \"$FORK_OWNER:$BRANCH\",
     \"base\": \"main\"
   }"
 ```

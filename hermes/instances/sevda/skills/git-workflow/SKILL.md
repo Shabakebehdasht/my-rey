@@ -162,6 +162,60 @@ returns HTTP 200 while **silently keeping the old ref** — always re-read
 **Move/create a branch ref without force-deleting:** `git branch -f <name> <commit>`
 works where `git branch -D` may be gated.
 
+### Run formatters before staging, then audit what the formatter touched
+
+A `--dirty` / pre-commit formatter pass rewrites every file *it* considers
+dirty, not just yours, and those edits ride straight into your commit. After
+any formatter run, audit the staged set for files you never opened:
+
+```bash
+git add <only your paths>          # never `git add -A`
+git diff --cached --name-only      # must list ONLY this change's files
+git diff --name-only <base>..HEAD  # and again after commit
+```
+
+If a formatter changed an unrelated file, restore it from the base and keep it
+out of the commit. Reverting it as a **forward commit** is preferable to
+rewriting history when a force push is unavailable or blocked.
+
+### Verify PR contents from the remote, and read the file list with an API
+
+Never trust a PR's own commit count as a scope signal — a branch cut from a
+working branch carries that branch's commits as ancestry while the diff stays
+correct. Read the file list from the API, which reflects the merge-base diff:
+
+```bash
+gh pr view <N> -R <org>/<repo> --json files -q '.files[].path'   # may be cached
+gh api repos/<org>/<repo>/pulls/<N>/files --jq '.[].filename'     # authoritative
+```
+
+Extra commits in the PR are harmless **iff** the file list is exactly your
+scope; confirm with a three-dot diff against the base:
+
+```bash
+git diff --name-only <base>...origin/<head-branch>
+```
+
+### A stale pre-existing gate failure may be an environment artifact
+
+Before blaming a baseline/config file or filing it as a pre-existing repo
+defect, clear the local caches and re-run. A classmap left over from a file
+another branch deleted makes the removed class still load, which surfaces as
+dozens of confusing analyser errors. `composer dump-autoload` fixes it with no
+repo change. Re-verify the gate on the pristine base tree too, so you can state
+plainly whether the failure is yours.
+
+Critically: **if you reported the failure in a PR body and later disproved your
+own explanation, correct the PR body.** Do not leave an explanation you have
+since disproven sitting under a reviewer's nose — edit it with `gh pr edit`.
+
+### Forward-fix a PR you cannot force-push
+
+When a push would need `--force-with-lease` — often blocked on unattended
+runners — or the guidance forbids rewriting a published branch, add a small
+self-contained follow-up commit on the same head branch instead. Remote file
+lists and diff views update on their own.
+
 ### A worktree needs its own runtime wiring
 
 A fresh worktree has no `.env`, `vendor/`, or `node_modules`. Symlink the

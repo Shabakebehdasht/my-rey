@@ -38,11 +38,47 @@ Temporarily restore the old behavior of the exact function under test, run the n
 
 ### 7. Run repository quality gates, then open the PR immediately
 
-Run the formatter, lint, typecheck, and the repo's canonical test entrypoint on affected areas; use `requesting-code-review` on the diff. Then push and open the PR right away — the PR is what dispatches CI, and CI latency is the long pole; do not sit on finished work. Load `github-pr-workflow` for PR mechanics: conventional branch/commit, body linking the issue with problem, approach, tests, risk, and exclusions. Read the PR back and verify head SHA, base, title, and files. Done when the PR exists with the intended diff and CI is running.
+Run the formatter, lint, typecheck, and the repo's canonical test entrypoint on affected areas; use `requesting-code-review` on the diff. Then push and open the PR right away — the PR is what dispatches CI, and CI latency is the long pole; do not sit on finished work. Load `github-pr-workflow` for PR mechanics: conventional branch/commit, body linking the issue with problem, approach, tests, risk, and exclusions.
+
+**Open the PR in the repo the maintainer actually reads.** When the work is
+contributed from a fork, `origin` is the fork and a bare `gh pr create` lands the
+PR there — invisible, unmerged, and easy to mistake for delivered. Pass `-R` for
+the canonical repo and `--head <fork-owner>:<branch>`, then prove the placement
+with `gh pr list -R <canonical> --head <branch>` before reporting it. A wrong-repo
+PR is not lost work: close it (`gh pr close N -R <fork> --delete-branch=false`)
+and reopen — the commits and branch stay.
+
+Read the PR back and verify head SHA, base, title, files, **and the repo it was
+opened in**. Done when the PR exists in the intended repo with the intended diff
+and CI is running.
 
 ### 8. Shepherd CI honestly and close the loop
 
 Inspect live checks and failure logs via `gh pr checks` / `gh run view --log-failed`. Distinguish failures introduced by your diff from pre-existing baseline or infrastructure failures — reproduce on the default branch when unsure, and rerun once only for genuine infra flakes. Never say "green," "merged," or "released" without live evidence of that exact state. When the PR lands, comment on the issue with the PR link and a one-line explanation so the reporter gets a traceable resolution. Done when CI state, remaining blockers, and the issue thread all reflect reality.
+
+### 9. When one request carries several issues, keep each PR pure
+
+Each issue gets its own branch cut from the canonical base, its own PR, and a
+body that closes only its own number. Two things silently break the split:
+
+- **Branching off the previous PR's tip** carries that PR's commits and files
+  into the next one. Cut every additional branch from the base commit and
+  verify with `git diff --name-only <base>...HEAD` before committing.
+- **Shared test fixtures.** When a teammate is editing the same test file for a
+  parallel issue, put your cases in a NEW file for the same component instead
+  of adding to theirs, and say in the PR which existing file carries the
+  untouched coverage. Shared-file edits from two branches collide.
+
+Also: run the full suite before each PR, not once at the end — a branch switch
+mid-run silently invalidates the result.
+
+### 10. Close the loop over the whole batch
+
+Report per issue: files changed, test counts, last commit SHA, and PR URL. Then
+state cross-cutting findings plainly — a pre-existing failure you discovered,
+a test that pinned the buggy behavior, a plan step that turned out to be a
+no-op on current code. A reviewer needs those even though they are not part of
+any single diff.
 
 ## Pitfalls
 
@@ -51,7 +87,25 @@ Inspect live checks and failure logs via `gh pr checks` / `gh run view --log-fai
 - Fixing a symptom at one call site while sibling sites keep the same bug.
 - Shipping a regression test that also passes without the fix.
 - Opening a PR with unrun tests or unrelated formatting churn.
+- Opening the PR in your own fork because `origin` points there, and reporting
+  it as delivered — the target repo must be named explicitly and confirmed.
 - Claiming the issue is delivered because a PR exists.
+- Treating the issue's stated root cause or test plan as authoritative — verify
+  every claim against the current code, and implement what you confirmed, not
+  what the text asserts. Where the plan's literal instructions do not match the
+  framework (e.g. an assertion key), follow the framework and note the
+  divergence in the PR.
+- A plan step that turns out to be already satisfied on the base branch — verify
+  and report it as a no-op instead of manufacturing a change.
+
+## Authority order when a plan and the code disagree
+
+When a maintainer comment, a plan, and the actual code all speak to the same
+point, rank them: **verified code behavior first**, then the maintainer's
+approved decisions, then the exploratory analysis, then the raw issue prose.
+The issue body is discovery history, not a contract. Reproduce the defect on
+the base branch before implementing anything, and if a claim does not reproduce,
+say so on the issue and stop rather than guessing.
 
 ## Verification
 
@@ -61,4 +115,5 @@ Inspect live checks and failure logs via `gh pr checks` / `gh run view --log-fai
 - [ ] Regression test proven to fail without the fix.
 - [ ] Sibling call sites fixed or explicitly ruled out.
 - [ ] Every changed line traces to the issue.
+- [ ] PR opened in the intended repo (not the fork), confirmed by a fresh read.
 - [ ] CI state reported from live evidence only; issue commented with the PR link.

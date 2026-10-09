@@ -35,6 +35,8 @@
 | Trust a scope you just built | use it directly | `expect($scope)->not->toBeEmpty()` first — an empty scope makes every "excludes X" assertion pass for the wrong reason |
 | Guard the scope in the query | `->when($ids, fn ($q) => $q->whereIn(...))` | unconditional `->whereIn('col', $ids)` — `when()` drops the predicate for an empty `$ids` and leaks the whole table |
 | "Unit with zero personnel" fixture | attach the user's backing person to the unit under test | the user factory creates its backing `Person` on the **first existing** unit — create the empty unit *after* the user, or assert on a unit created later |
+| Model reached through a person's scope | invent a `u_id`/`person_id` column on the child | link by `n_code` and resolve `persons.u_id` — hardware/hardware-audits scope through the person's unit, so pass the creator's `n_code`, and verify the column exists in the migration before trusting a factory override |
+| Permission-gated endpoint fixture | pass an unrelated permission | the route's `role_or_permission` gate answers 403 before the controller runs, so the test proves nothing; grant exactly the gate's permission AND the matching Sanctum token ability |
 | Query-count budget | guess a number | measure once, then set a bound with slack, and skip `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` when counting |
 
 ## Livewire Effects & Success-Path Assertions
@@ -51,6 +53,11 @@
 | Regression test for a swallowed success path | only `assertDatabaseHas` | assert success message **and** reset state **and** `assertDispatched('<event>')` — the write passes on old code too |
 | Fixture for a bug that only fires on success | an errored fixture | a zero-error fixture; an errored one exercises the same catch legitimately |
 | Prove the new test actually bites | trust it went red once | stash the implementation and re-run — confirm it fails at the intended assertion |
+| Prove a leak reproduces before fixing | assume the issue is right | drive the unfixed path in a throwaway probe and print the real artifacts (rows created, files on disk, error bag); quote that output in the PR. Delete the probe file before committing |
+| Owner/unit-scope leak test | assert only that a row renders | build a **pair** fixture (one row the viewer owns + one a colleague owns in the SAME unit) and assert the COUNT. With only the viewer row a leak is invisible; with only the colleague row the correct answer and the leak look identical |
+| A pre-existing test pins the buggy behavior | treat its failure as a regression | that assertion was pinning the defect. Update its fixture to the correct contract and say so in the PR — do not silently "fix" it |
+| RED is an error, not a failure | accept any red | a missing import / empty assertion also reads red. Confirm the failure message names the real defect before implementing |
+| Scope-aware fixture (org tree, nested units) | create rows as siblings of the user's unit | create them as **children of** the actor's unit, or they fall outside the scope and the assertion passes for the wrong reason |
 
 ## E2E Test Structure
 

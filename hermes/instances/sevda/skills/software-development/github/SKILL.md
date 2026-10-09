@@ -42,6 +42,10 @@ Supporting assets: `scripts/gh-env.sh` + `scripts/git-credential-token.py`
   `references/auth.md` before anything else.
 - Prefer `gh` over raw REST; drop to `gh api` only for endpoints the
   porcelain lacks (the cheatsheet lists them).
+- **The push remote and the PR target are usually different repos.** `gh pr
+  create` without `-R` opens the PR wherever `origin` points — your fork — where
+  no maintainer sees it. Name the target repo explicitly and qualify the head
+  as `<fork-owner>:<branch>`; see `references/pr-workflow.md`.
 - Never report CI green without checking `gh pr checks` yourself; never
   claim merged without verifying `state,mergedAt`.
 - Read full context before writing: `gh issue view --comments` /

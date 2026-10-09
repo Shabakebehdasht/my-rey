@@ -188,6 +188,47 @@ Test contract after the split:
   per node, and pin the result with a measured query-count assertion so the N+1
   cannot come back.
 
+## Request validation: enforce in the method that writes, not in a hook
+
+A validation rule living only in a Livewire `updated<Prop>` hook (or any
+per-request artefact) does **not** guard a later write. `updatedFiles()`
+rejecting a bad upload fills the error bag for *that* request; the subsequent
+`call('saveTicket')` is a separate POST with a fresh error bag, so it can store
+whatever the client sent. Validate inside the method that writes:
+
+```php
+public function saveTicket(): void
+{
+    $this->validate([
+        // …the other fields…
+        'files' => 'nullable|array|max:5',
+        'files.*' => 'file|mimes:jpg,pdf,zip,rar|max:5120',
+    ]);
+}
+```
+
+Copy the shape from a sibling component that already gets it right (e.g. an
+inbox `submitAction()`), so the allowlist and cap stay consistent across the
+feature. Validate *before* the first create/write so a rejected payload leaves
+no parent row, no child row and no file on disk — then assert all three in the
+regression test.
+
+- **Do NOT hoist a per-feature allowlist into `config/livewire.php`.** A global
+  `'rules'` breaks every other component that legitimately uploads a different
+  type (import screens take `xlsx,xls,csv`). Keep the allowlist on the component.
+- **Never widen the allowlist as a drive-by.** Fixing a type/size hole is not a
+  mandate to add new accepted types.
+- When a rule the issue text specifies does not match the framework's actual
+  key, follow the framework and **note the divergence in the PR body** — e.g.
+  `files.*` failures are keyed `files.0`, and `assertHasErrors(['files'])` is a
+  literal key lookup that will NOT match it. Read
+  `vendor/livewire/…/SupportValidation/TestsValidation.php` (`makeErrorAssertion`)
+  to confirm key semantics before asserting.
+- If a `updated` hook already clears the offending property, the save path may
+  legitimately raise no error on that later call. Assert the security property
+  (nothing written) rather than forcing an error assertion that misdescribes
+  the flow.
+
 ## Merge Conflicts in Auto-Generated Files
 
 When a PR has merge conflicts with `upstream/beta` in auto-generated files
