@@ -102,6 +102,33 @@ file), split them so each PR stands alone:
 6. Prove isolation per branch before pushing:
    `git diff --stat <base>..<branch>` lists only that issue's files.
 
+## The working branch may be shared and already diverged
+
+The session's current branch is often a long-lived shared one, and its remote
+counterpart can carry commits that are **not** on the base (a revert, another
+issue's work, someone else's push). `git push` then fails non-fast-forward.
+
+**Do not force-push to clear it** — that discards commits you did not write.
+Instead:
+
+1. Read what is actually on the remote first: `git log --oneline HEAD..origin/<branch>`.
+   If those commits are unrelated to your issue, they must not travel in your PR.
+2. Create a dedicated branch for the issue from the **base commit**, and put your
+   commit on it: `git branch <issue-branch> <commit>`.
+3. Prove isolation before pushing: `git diff --stat <base>..<issue-branch>` lists
+   only your files.
+4. Push that branch and use it as the PR head.
+
+## Cross-fork PRs need the fork-qualified head
+
+`gh pr create --repo upstream` only sets the **base**. GitHub resolves `--head`
+against the *upstream* repo first, so a branch that exists only on your fork
+fails with `Head ref must be a branch` / `No commits between beta and <branch>`.
+
+Qualify it with the fork owner: `--head <fork-owner>:<branch>`. Never drop `-R`;
+without it `gh` opens the PR in the repo your `origin` points at, where the
+maintainer never sees it — and nothing in the command output reveals the mistake.
+
 ## Tests run serially, always
 
 The Pest suite uses ONE test database. Never run a suite in the background
@@ -132,6 +159,12 @@ from the reviewed design, not that the design was wrong.
   count or an equivalent bound, not a smoke assertion.
 - When the fix removes a framework anti-pattern, add a test asserting the
   absence (e.g. the payload method runs once per view, not twice).
+- **One failure in a full-suite run is not your regression until proven.** Before
+  reporting it, (a) run that file alone, (b) re-run it with the failing run's
+  random-order seed, (c) confirm your diff touches none of the code it exercises,
+  and (d) re-run the whole suite once. If it passes in isolation and the second
+  suite is green, report it as a flake and name the file and the evidence — do
+  not silently drop it, and do not “fix” unrelated code to make it go away.
 
 ## Stop Conditions
 

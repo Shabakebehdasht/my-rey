@@ -149,6 +149,30 @@ PHP code changes, test writing, and API resource transformers.
   fix, so it is worthless as a gate. Go through the real path (an actual HTTP
   request through the middleware stack) so the app's configured value is what
   is under test — and confirm the new test FAILS on the unfixed code first.
+- **A soft-deleting model makes EVERY `$x->relation` nullable, whatever the FK
+  says.** `SoftDeletes` keeps the row and leaves the FK non-null, so the
+  relation resolves to `null` anyway — the nullable-FK migration is a *second*,
+  independent path and does not bound the class. This holds even on `NOT NULL`
+  columns, so \"the FK is NOT NULL, so it cannot break\" is wrong. A bare
+  `->relation->prop` read is then an *exception*, not a blank cell: Laravel
+  promotes the warning to `ErrorException`, so one such row takes the page down.
+- **`withTrashed()` is invisible to PHPStan.** It is a runtime macro registered
+  by `SoftDeletingScope::addWithTrashed()`, never declared on
+  `Eloquent\Builder`, so `$q->withTrashed()` reports `method.notFound` at
+  level 6. Use the declared equivalent as a **statement, not a chain**:
+  `$q->withoutGlobalScope(SoftDeletingScope::class);` — it accepts an object or a
+  class-string. Chaining off its return re-types the receiver as `Query\Builder`
+  via the one-way `@mixin`, breaking any later Eloquent-only call.
+- **A `with()` closure receives a `Relation`, not a `Builder`.**
+  `Builder::eagerLoadRelation()` calls `$constraints($relation)`. Typing the
+  closure `fn (Builder $q)` passes PHPStan and throws a `TypeError` at runtime;
+  leave the parameter untyped (as the rest of a Livewire codebase does) or type
+  it `Relation`. Verify against the running app rather than the docblock.
+- **`deleted_at` must be in a partial column select before asking `trashed()`.**
+  `trashed()` reads that column and returns \"not deleted\" when it was absent,
+  silently. With a `select('id','n_code')` eager load, a soft-deleted creator
+  renders under their real name on one surface and as the inactive-user label on
+  the next. Always select the discriminator whenever the label depends on it.
 - **`updateOrCreate` overwrites ownership on edit.** When using
   `Model::updateOrCreate(['id' => $editingId], [...])` and one field
   (e.g. `user_id`, `created_by`) should only be set on create — not on
