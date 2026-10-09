@@ -43,20 +43,52 @@ An item whose symptom is already gone, or partly gone, still goes to a peer —
 with the prompt telling it to implement only the remainder and to record in
 the PR body which part was already fixed. Do not silently drop a partial.
 
+### "Closes #N" in a merged PR does not mean the issue is finished
+
+An issue can be cited by a merged PR and still be open with the actual symptom
+intact, because that PR fixed a neighbouring site or only half the case. The
+merged-PR list is a *candidate* filter, not a verdict. For each intersecting
+item, read what the merged PR actually changed and compare it against the file
+and line the issue names:
+
+```bash
+gh pr view <merged-pr> -R <owner>/<upstream> --json files \
+  --jq '.files[] | "\(.additions)+ \(.path)"'
+git show canonical/<base>:<path-named-by-the-issue>     # is the symptom still there?
+```
+
+- **Symptom still present on the base ref** → the remainder is real work. Assign
+  it, and open the prompt with what already landed and what is left, so the peer
+  neither re-implements the finished half nor re-derives the same diagnosis.
+- **Symptom gone, issue merely not yet closed** → VERIFY-ONLY assignment: the
+  peer confirms the fix exists on the base ref and opens no PR. An implement
+  prompt here gets the same fix re-applied as duplicate work.
+
+This distinction is the difference between dropping real work and dropping none.
+
 ## 2. Detect file overlap between assigned items
 
 Two peers editing the same file in parallel produce conflicting PRs that block
-each other. Extract the file paths from each item body and intersect them
-before you choose the split:
+each other. **Intersect only the paths each item will EDIT, not every path it
+names.** An item cites files as evidence far more often than as targets — a
+route file listed to prove a gate exists, a model listed to show a column is
+not fillable — so raw mention intersection reports conflicts that do not exist
+and mangles the split into a worse one.
+
+Take paths from the action/plan section of each item, then compare:
 
 ```bash
-# per item, from the fetched bodies
-grep -oE '\b(app|tests|database|resources|routes|config|bootstrap|\.github)/[A-Za-z0-9_/-]+\.(php|js|yml|json)\b' <body>
+# per item, restricted to its action/plan section (not the whole body)
+grep -oE '\b(app|tests|database|resources|routes|config|bootstrap|\.github)/[A-Za-z0-9_/-]+\.(php|js|yml|json)\b' <action-section>
 ```
 
-Then either move an item to a peer that owns none of its files, or when two
-items unavoidably share a hot file, name ONE owner in both prompts and tell the
-others explicitly not to touch it. Give every prompt the standing escape:
+Shared *evidence* paths are fine; shared *edit* paths are not. Then either move
+an item to a peer that owns none of its files, or when two items unavoidably
+share a hot file, split it by LINE ownership: name in BOTH prompts exactly
+which layer each peer owns (e.g. "you own the value-binder/escaping layer of
+this export, the other peer owns its date columns"), and give every prompt the
+standing escape:
+
 *if finishing the item requires editing a file that belongs to another peer's
 item, stop and say which file and which line instead of editing it.*
 
@@ -66,12 +98,31 @@ Batch one call. A number in an upstream repo may be an issue rather than a PR;
 `gh pr view N` then fails with a GraphQL "Could not resolve to a PullRequest"
 that reads like an auth error but is not.
 
+**List the backlog compactly first.** A bulk issue lister that returns full
+bodies for every labelled item spills to disk and floods context before triage
+starts. Scan titles with `gh issue list --label <label> --state open --json
+number,title,labels`, then fetch bodies and comments for the survivors only.
+
 ```bash
 for n in 101 102 103 104; do
   echo "=== #$n ==="
   gh issue view $n -R <owner>/<upstream> --json number,title,state,author,labels,url,body
+  gh api repos/<owner>/<upstream>/issues/$n/comments --paginate --jq '.[].body'
 done
 ```
+
+**Rank the comment text above the body.** A review comment carries the corrected
+plan; a later gate/approval comment carries the decisions that are now CLOSED.
+Three consequences for the prompt you write:
+
+- Where the body offers "fix A or B" and a later comment chose one, send the
+  DECIDED option and state the rejected one is explicitly out of scope. A peer
+  given both stops to ask a question that is already answered.
+- Carry the comment's "not part of this issue" exclusions verbatim (out-of-scope
+  suggestions, refuted claims, rejected alternatives). This is what stops a peer
+  helpfully implementing a rejected suggestion and widening the diff.
+- Corrections by the reviewer beat the body's root-cause narrative; when the two
+  conflict, the comment wins and the prompt says so.
 
 Bodies of well-written plans carry the solution shape, the tests they want and
 their own risk assessment. Quote their intent into the prompt so the peer
@@ -81,7 +132,19 @@ already documented elsewhere in the repo) so the peer does not mis-locate the
 code.
 
 Also carry the triage forward into the prompt as an explicit step: fetch the
-canonical base ref, merge it, and re-verify before writing code.
+canonical base ref, merge it, and re-verify before writing code. Give the peer
+the exact base-ref sha the prompt's claims were verified against, and tell it to
+re-verify against that ref rather than its own working tree.
+
+**Composing the prompt files.** Plan text is full of literal braces — object
+literals in the code the peer must write — so never build prompts with
+f-strings or `.format()`; one brace aborts the whole batch build. Use plain
+string concatenation of a shared-block constant plus per-item paragraphs. Then
+grep the written files before firing: one hit for a sentinel line of the shared
+block per file, and the issue-number list per file matching the assignment with
+nothing shared and nothing dropped. A batch where the shared block silently
+failed to concatenate writes plausible-looking files and strips the branch and
+PR rules from every peer at once.
 
 ## 4. Standing block, identical in every prompt
 
@@ -110,8 +173,20 @@ Then the per-item part:
 gh issue view <N> -R <owner>/<upstream>
 <standing block>
 در پایان: commit واضح روی برنچ خودت، push به فورک خودت (اگر برنچ نبود بساز)، سپس یک PR
-از برنچ خودت به شاخه پایه در ریپوی <upstream> باز کن. روی شاخه پایه مستقیم push نکن.
-PR را merge نکن.
+از برنچ خودت به شاخهٔ `beta` در ریپوی **<upstream>** باز کن:
+
+    gh pr create -R <owner>/<upstream> --base beta --head <your-branch> \
+      --title "<title>" --body "Closes #<N>\n\n<body>"
+
+قواعد حیاتی این خط:
+- `-R <owner>/<upstream>` **الزامی** است. بدون آن، `gh pr create` برنچ را در همان ریپویی
+  باز می‌کند که remote `origin` به آن اشاره می‌کند، یعنی **فورک خودِ peer** — و PR در
+  آپ‌استریم دیده نمی‌شود، پس مدیر پروژه هرگز آن را نمی‌بیند. این اشتباه کار و تست را
+  بی‌نقص نگه می‌دارد و فقط مقصد را خراب می‌کند، پس از خود گزارش peer هم معلوم نمی‌شود.
+- یک برنچ و یک PR برای هر ایشو. اگر هر دو ایشو در یک برنچ رفت، PR بعدی کامیت ایشوی قبلی
+  را هم حمل می‌کند و با مرج، ایشوی قبلی هم بی‌صدا مرج می‌شود. هر برنچ را از روی شاخهٔ
+  پایه بساز، نه از روی برنچ ایشوی قبلی.
+- PR را merge نکن، لیبل نزن، ایشو را نبند.
 گزارش نهایی: خلاصه تغییرات، نتیجه تست‌ها، هش آخرین commit، و لینک PR.
 برو شروع کن و تا آخرش ادامه بده؛ لازم نیست منتظر تأیید من بمانی. فقط در پایان گزارش بده.
 ```
@@ -143,6 +218,14 @@ the cheapest possible bug to fix and the most expensive to discover later.
 The prompt opens with a DO-NOT list (no `gh workflow run`, no `hermes peer dm`,
 no cancel/restart) and "you are ONLY observing and reporting". It checks run
 status, branch head, open PRs into the base branch, and `gh pr checks`.
+
+**Write the observer prompt in plain ASCII.** Persian prose trips the same
+invisible-Unicode validation that rejects ZWNJ, through the CLI and through
+`cronjob_manage` alike, so English instructions that ASK for a report in the
+user's language are more reliable than a Persian prompt — no strip-retry loop,
+and the job is reproducible from the file. Per-issue assignment makes the
+observer able to name which peer owes which PR, and stating the mandatory CI
+job names lets it quote the exact failing job instead of "CI red".
 
 **Record each peer's branch sha at assignment time and put that baseline in
 the observer prompt.** "Work landed" is then a fact read off the sha, not a
