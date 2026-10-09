@@ -34,11 +34,19 @@ PHP code changes, test writing, and API resource transformers.
    call `toArray(new Request())` to assert exact field contracts.
 5. **E2E tests go in `tests/e2e/<feature>/`** with `.spec.ts` extension.
    Import from `../shared/fixtures` for `login`, `waitForLivewire`, etc.
-6. **Regenerate PHPStan baseline after fixing errors.** When you fix errors
+6. Regenerate PHPStan baseline after fixing errors. When you fix errors
    that exist in `phpstan-baseline.neon`, the old entries become unmatched
    and PHPStan reports new errors. Run `vendor/bin/phpstan analyse
    --generate-baseline` after every fix round, then verify with
    `composer phpstan`.
+7. **Verify the regenerated baseline by parsing it, not by reading the diff.**
+   `--generate-baseline` reorders unrelated entries, so a `git diff` on it shows
+   `+` lines for suppressions you never added — and eyeballing that diff is how a
+   genuinely new suppression gets waved through. Extract both revisions'
+   `(message, identifier, count, path)` tuples and compare them as multisets:
+   the only legitimate changes are entries for code you actually touched
+   (added when you fixed a baselined error, removed when you stopped writing the
+   offending call). Any other addition means a real new error is being hidden.
 
 ## Authorization on Livewire Mutators
 
@@ -81,12 +89,50 @@ keeps writing. Every public mutator needs its own `authorize()`.
    `/livewire/update` in the whole app, including components that rely on the
    route gate alone. Do not bundle it into a component-authorization fix; it is
    a different blast radius and belongs in its own change.
+8. **A public Livewire method taking an id from `wire:click` receives BOTH
+   shapes.** Unquoted attributes deliver a string, typed props deliver an int,
+   so a strict `in_array($id, $scopeIds, true)` guard rejects a legitimate id
+   and fails closed on the one path that is supposed to succeed. Cast to one
+   type before comparing (`in_array((int) $id, $scopeIds, true)`) and mirror
+   the same cast in the method's own param docblock, so the guard and the
+   lookup agree on what "the same id" means.
 8. **Livewire's test harness already exempts `AuthorizationException`,** so
    `assertForbidden()` works without extra setup. `RequestBroker` calls
    `withoutExceptionHandling([HttpException, AuthorizationException, ModelNotFoundException])`
    — do not write a bespoke `expectException` around these, and do not assume
    the exemption applies to exceptions you throw yourself from a catch block
    (it applies to the class, so a re-thrown one is exempt too).
+
+## Fixing Existing Tests That Pinned a Leak
+
+Closing a disclosure makes previously-green tests fail. That is the bug being
+fixed, not a regression — but the failure must be **diagnosed, not assumed**.
+Work it in this order:
+
+1. **Read each broken test's fixture and ask what it was really asserting.**
+   A test that passed *because* the query was unscoped was pinning the leak.
+   Identify that before touching the file.
+2. **Verify the root cause against the resolver's actual source**, not the
+   symptom. For a recursive-scope resolver, read the CTE: the anchor is
+   normally unconditional and children are filtered, so a fixture row created
+   as a **tree root** (no `parent_id`) lands in *nobody's* scope while a
+   parentless row looks perfectly valid in isolation. Quote the SQL shape in
+   the commit and PR.
+3. **Fix the fixture, never the assertion.** Move the row into the actor's
+   scope (`parent_id` = the actor's own unit) so the test's original intent
+   holds verbatim. Never weaken, relax, delete or `skip` the assertion to make
+   a security fix green — a silently relaxed assertion is the regression that
+   the next reviewer cannot see.
+4. **Check the second half of a delete/absence test still means something.**
+   A test asserting "resolves, then falls back to null after delete" keeps
+   both halves: the fixture fix only touches the pre-delete half.
+5. **Say in the PR body why a test-only commit rides along with a security
+   fix** — the fixture, the resolver rule, and the fact that these assertions
+   were pinning the leak. Otherwise a later reader assumes the tests were
+   changed for convenience and reverts them.
+6. **Ownership constraints are not permanent.** When a shared file's owner has
+   landed and their PR is green, taking it over is the right move; announce
+   the change in the PR body rather than leaving it implicit.
 
 ## File Cleanup Tied to an FK Cascade
 
@@ -153,22 +199,23 @@ with the live schema, session-mutating helpers) are in
   `NotificationResource.php` for the reference implementation).
 - **PHPStan without larastan degrades an Eloquent chain to `Query\Builder`
   after `whereIn()`.** `Eloquent\Builder` declares `@mixin Query\Builder`, so
-  the first call PHPStan resolves through the mixin types the receiver as
-  `Query\Builder` and any later Eloquent-only call fails with
-  `Call to an undefined method Illuminate\Database\Query\Builder::with()/withCount()`.
-  **Fix (verified — clears the error with zero baseline entries): end every
-  chain on a call that `Eloquent\Builder` defines itself.** Put eager loads
-  first, then move the scope filters into a trailing closure —
-  `->where(function ($q) use ($ids) { $q->whereIn(...); })` — or filter by key
-  with `whereKey($ids)` instead of `whereIn('id', $ids)`. `where()` and
-  `whereKey()` are declared on the Eloquent builder with `@return $this`, so the
-  body returns an Eloquent builder and `return.type` disappears; callers already
-  honour the declared `@return Builder<Model>`. Do NOT reach for an inline
-  `@var`/`assert()` to override the inferred type — PHPStan rejects that
-  explicitly. Only a chain that must end on a mixin-only call
-  (`orderBy()`/`limit()` before `get()`) still reports; that residual goes into
-  the regenerated baseline (Always-On rule 6). The root fix is larastan, which
-  this project does not run.
+  the first mixin-resolved call re-types the receiver and every later
+  Eloquent-only call fails. Fix by ending the chain on a call
+  `Eloquent\Builder` declares itself (`where()`, `whereKey()`), or filter by
+  key instead of `whereIn('id', …)`. Never reach for an inline
+  `@var`/`assert()` to override the inferred type. Full recipe, plus the
+  static-forwarder and typed-property variants, in
+  `references/testing-pitfalls.md` under PHPStan Patterns.
+- **A static `Model::whereIn(...)` chain has no larastan to resolve it.** The
+  static forwarders are not declared on the model, so `Model::whereIn('id',
+  $ids)->find($x)` reports `Call to an undefined static method` — and the old
+  bare `Model::find($x)` needed a baseline entry for exactly that reason. Adding
+  the scope therefore *creates* a suppression while retiring one. Use
+  `Model::query()->where(fn ($q) => $q->whereIn('id', $ids))->find($x)`:
+  `query()` is declared on `Eloquent`, the closure keeps the receiver an
+  `Eloquent\Builder`, and `find()` keeps its `Model|null` return type so the
+  assignment to a typed property does not degrade to `stdClass`. Confirms the
+  rule above — the trailing closure is the fix for both halves of the problem.
 - **A JS `$wire.mount()` / `$wire.hydrate()` cannot re-run anything.** Livewire 4
   refuses direct calls to lifecycle hooks: `SupportLifecycleHooks` matches the
   method name against a protected list (`mount`, `boot`, `booted`, `exception`,
