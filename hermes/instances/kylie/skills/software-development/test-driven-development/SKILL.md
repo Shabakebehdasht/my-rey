@@ -32,7 +32,17 @@ Write the test first. Watch it fail. Write minimal code to pass.
 **Exceptions (ask the user first):**
 - Throwaway prototypes
 - Generated code
-- Configuration files
+- Configuration files — unless you can write a validator script first (see below)
+
+### Testing Configuration Files
+
+A config file (workflow YAML, XML, INI) can still follow RED-GREEN: the
+validator script IS the test. Write a script that asserts every load-bearing
+property of the config — required keys present, values correct, forbidden
+patterns absent — run it against the current config, and watch it fail.
+Then edit the config until the validator passes, and re-run the validator
+after every subsequent config edit. A config change with no failing-first
+validator is untested config.
 
 Thinking "skip TDD just this once"? Stop. That's rationalization.
 

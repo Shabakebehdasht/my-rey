@@ -37,6 +37,12 @@
 | "Unit with zero personnel" fixture | attach the user's backing person to the unit under test | the user factory creates its backing `Person` on the **first existing** unit — create the empty unit *after* the user, or assert on a unit created later |
 | Query-count budget | guess a number | measure once, then set a bound with slack, and skip `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` when counting |
 
+## Coverage Denominators and Compiled Artifacts
+
+| Scenario | Wrong | Correct |
+|---|---|---|
+| Attribute coverage to framework-compiled files (Blade views compiled to hashed per-worker paths, etc.) | add the compiled directory to the coverage include/filter and trust the number — per-file rates report 0% and dead copies inflate the denominator | verify attribution with a real run first: if compiled paths are hashed per worker with no stable source mapping, stock coverage tooling cannot map them — report the blind spot as a non-blocking informational job and leave the hard gate on the measurable denominator untouched until a real total exists |
+
 ## E2E Test Structure
 
 ```
@@ -45,7 +51,10 @@ tests/e2e/<feature>/<feature>.spec.ts
 
 Imports from `../shared/fixtures`:
 - `login(page, nCode?, password?)` — fills login form, waits for redirect
-- `waitForLivewire(page)` — waits for `.wire-loading` to disappear
+- `waitForLivewire(page)` — waits for a Livewire request to settle. VERIFY
+  the wait signal against the installed Livewire version before trusting it:
+  a helper that polls a CSS class the framework never renders returns on the
+  first poll and every spec that depends on it is timing-dependent.
 - `waitForToast(page, text?)` — waits for toast notification
 
 Pattern:
@@ -77,6 +86,11 @@ Pattern:
 
 ### Runner lifecycle
 
+- A CI job that runs a suite through a lifecycle script proves execution
+  with the reporter's own output: tee the stream to a log file and assert
+  on the executed-test count plus the reporter's summary line. A green job
+  with zero executed tests is a failure — an execution count of zero must
+  fail the step, never pass silently.
 - A `set -e` runner that swaps `.env` (or any config file) **skips its restore
   step when a test fails** — restore the backup, remove temp state and kill the
   dev server yourself after every run, pass or fail.

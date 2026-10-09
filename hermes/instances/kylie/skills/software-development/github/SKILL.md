@@ -33,7 +33,9 @@ starting that workflow, the body below only routes.
 
 Supporting assets: `scripts/gh-env.sh` + `scripts/git-credential-token.py`
 (auth helpers), `templates/` (PR bodies, bug report, feature request),
-`references/ci-troubleshooting.md`, `references/conventional-commits.md`,
+`references/ci-troubleshooting.md` (failure patterns AND new-job design:
+prove execution with counts, non-blocking ramp, fail-fast preconditions),
+`references/conventional-commits.md`,
 `references/github-api-cheatsheet.md`, `references/review-output-template.md`.
 
 ## Core discipline (applies to every workflow)
