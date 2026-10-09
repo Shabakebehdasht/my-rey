@@ -2,11 +2,69 @@
 
 Recipe for "give issues N..M to the kids, one each, and stay on it until done".
 
-## 1. Read every item before assigning
+## 1. Triage the backlog before assigning anything
+
+The peers clone the repo at boot, but the base branch keeps moving while
+they boot and while you write prompts. **Every item's claim must be checked
+against the current tip of the base branch, not against the checkout you have
+locally** — an item whose fix was merged while peers were booting is now
+duplicate work, and the user's standing expectation is that merged work is not
+redone.
+
+```bash
+git fetch https://github.com/<owner>/<upstream>.git <base>:refs/remotes/canonical/<base>
+git rev-list --left-right --count origin/<base>...canonical/<base>   # behind <tab> ahead
+gh pr list -R <owner>/<upstream> --base <base> --state merged --limit 30 \
+  --json number,title,mergedAt,headRefName
+```
+
+Read that merged-PR list against the backlog and drop items it already
+covers. Then fast-forward the fork's base branch so a later push cannot
+rewrite history:
+
+```bash
+git merge-base --is-ancestor origin/<base> canonical/<base> \
+  && git push origin canonical/<base>:<base> \
+  || echo "diverged - do NOT push, resolve first"
+```
+
+Only fast-forward when the ancestor test passes; a non-zero divergence means
+the fork has commits the upstream lacks, and pushing over them destroys work.
+
+Then re-verify the surviving items against the fetched ref, never the working
+tree:
+
+```bash
+git grep -n '<symbol>' canonical/<base> -- app resources
+git show canonical/<base>:path/to/file
+```
+
+An item whose symptom is already gone, or partly gone, still goes to a peer —
+with the prompt telling it to implement only the remainder and to record in
+the PR body which part was already fixed. Do not silently drop a partial.
+
+## 2. Detect file overlap between assigned items
+
+Two peers editing the same file in parallel produce conflicting PRs that block
+each other. Extract the file paths from each item body and intersect them
+before you choose the split:
+
+```bash
+# per item, from the fetched bodies
+grep -oE '\b(app|tests|database|resources|routes|config|bootstrap|\.github)/[A-Za-z0-9_/-]+\.(php|js|yml|json)\b' <body>
+```
+
+Then either move an item to a peer that owns none of its files, or when two
+items unavoidably share a hot file, name ONE owner in both prompts and tell the
+others explicitly not to touch it. Give every prompt the standing escape:
+*if finishing the item requires editing a file that belongs to another peer's
+item, stop and say which file and which line instead of editing it.*
+
+## 3. Read every item before assigning
 
 Batch one call. A number in an upstream repo may be an issue rather than a PR;
 `gh pr view N` then fails with a GraphQL "Could not resolve to a PullRequest"
-that looks like an auth error but is not.
+that reads like an auth error but is not.
 
 ```bash
 for n in 101 102 103 104; do
@@ -17,9 +75,15 @@ done
 
 Bodies of well-written plans carry the solution shape, the tests they want and
 their own risk assessment. Quote their intent into the prompt so the peer
-implements the plan rather than re-deriving it.
+implements the plan rather than re-deriving it. Quote each item's own
+non-obvious precondition (a file whose real name contains an emoji, a pattern
+already documented elsewhere in the repo) so the peer does not mis-locate the
+code.
 
-## 2. Standing block, identical in every prompt
+Also carry the triage forward into the prompt as an explicit step: fetch the
+canonical base ref, merge it, and re-verify before writing code.
+
+## 4. Standing block, identical in every prompt
 
 ```
 - روی برنچ کاری خودت کار کن (نامش را با `git branch --show-current` بخوان). برنچ را عوض نکن.
@@ -55,7 +119,7 @@ PR را merge نکن.
 Strip ZWNJ and friends from the finished file before any `hermes cron create`
 (see SKILL.md); for `hermes peer dm` they pass through fine.
 
-## 3. Deliver
+## 5. Deliver
 
 One prompt file per peer, then:
 
@@ -66,7 +130,12 @@ scripts/peer-dm-batch.sh kimya:/path/msg-a.txt sevda:/path/msg-b.txt
 Run it `background=true, notify=true` — a peer doing real work answers in
 minutes, which exceeds the 600s foreground cap. Do not re-run it while alive.
 
-## 4. Observe, never re-poke
+Before firing the batch, verify the prompts match the split you decided: the
+issue numbers named in each file must equal that peer's assignment, with no
+number appearing in two files. A prompt that names an item you reassigned is
+the cheapest possible bug to fix and the most expensive to discover later.
+
+## 6. Observe, never re-poke
 
 `hermes cron create "every 15m" "$(cat watch.txt)" --name <slug>
 --deliver origin --repeat 12 --skill hermes-peer-agents`
@@ -75,18 +144,24 @@ The prompt opens with a DO-NOT list (no `gh workflow run`, no `hermes peer dm`,
 no cancel/restart) and "you are ONLY observing and reporting". It checks run
 status, branch head, open PRs into the base branch, and `gh pr checks`.
 
+**Record each peer's branch sha at assignment time and put that baseline in
+the observer prompt.** "Work landed" is then a fact read off the sha, not a
+claim from the peer's own DM reply — a peer can report success and leave the
+branch untouched, so the baseline is the control that makes the report
+trustworthy.
+
 Surface the observer decision to the user as: done = PR open + checks green;
 otherwise in progress. Do not treat a missing PR as a failure signal — a peer
 mid-implementation has not opened one yet.
 
-## 5. Report
+## 7. Report
 
 Per peer: assignment, and later the PR number + URL, CI state, and any claim the
 peer reported as not matching reality. Flag dirty-tree leftovers (uncommitted
 files the peer deliberately did not touch) as a decision for the user instead of
 quietly committing or reverting them yourself.
 
-## 6. Close the doc gap the guard left
+## 8. Close the doc gap the guard left
 
 When a peer's report names a blocked doc edit, do it yourself on the peer's
 branch. This is the one artifact the peer structurally cannot produce.

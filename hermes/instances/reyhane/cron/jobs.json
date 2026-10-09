@@ -51,7 +51,66 @@
       "workdir": null,
       "run_claim": null,
       "fire_claim": null
+    },
+    {
+      "id": "ea3aab2017e5",
+      "name": "watch-peer-issues",
+      "prompt": "You are ONLY observing and reporting on five remote peer agents. You are NOT orchestrating them.\n\nDO NOT do any of the following:\n- do NOT run `gh workflow run` (never wake or re-wake any peer)\n- do NOT run `hermes peer dm` (never message, nudge, or re-poke a peer)\n- do NOT cancel, restart, or re-dispatch any workflow run\n- do NOT edit, commit, or push anything in any repository\n- do NOT try to fix anything you see going wrong; just report it\n\nYour only job is to report the current state of each peer's assigned work.\n\nThe five peers are kimya, sevda, sonia, kylie, rebecca. All five workflow runs live in ONE GitHub repo: Shabakebehdasht/my-rey, with workflows named kimya.yml, sevda.yml, sonia.yml, kylie.yml, rebecca.yml. Do not use the repos my-kim / my-sev / my-son / my-kyl — they return HTTP 404.\n\nTheir assigned issues, for reporting context only:\n- kimya: #875, #864, #855\n- sevda: #863, #872\n- sonia: #866, #871\n- kylie: #867, #865\n- rebecca: #858, #873, #870\n(issues #853 and #857 were already fixed by PRs #861 and #860 merged into beta earlier today, so ignore them.)\n\nRun these read-only checks and summarize:\n\n1. Workflow run state per peer:\n   `gh run list -R Shabakebehdasht/my-rey --workflow <peer>.yml --limit 1 --json databaseId,status,conclusion,createdAt,url`\n   Report a peer as BOOTING while its run is in_progress, and ASLEEP once the run is completed. Never interpret a cancelled run as \"up\".\n\n2. Branch head per peer (the peers push to their own branch in the fork Shabakebehdasht/h-dashboard):\n   `gh api repos/Shabakebehdasht/h-dashboard/branches/<peer> --jq '\"\\(.commit.sha[0:8]) \\(.commit.commit.message)\"'`\n   Compare against this baseline — all peers started from 6fbb4602 except rebecca, who started from 01ac8ff0. A changed sha means real work landed.\n\n3. Pull requests each peer opened into the canonical upstream beta:\n   `gh pr list -R asgarimehdi/h-dashboard --base beta --state open --limit 50 --json number,title,headRefName,url`\n   Attribute each PR to a peer by its head branch name, then match it to that peer's assigned issues.\n\n4. CI status for each open PR:\n   `gh pr checks <number> -R asgarimehdi/h-dashboard`\n   Report which checks are passing, failing, still pending, or not yet reported. A missing PR is NOT a failure: a peer mid-implementation has not opened one yet.\n\nOutput format — one line per peer, then a short overall section. For each peer:\n\nPEER <name> — <BOOTING|ASLEEP|SHUTDOWN> — branch <sha> (<n> commits ahead of baseline) — PRs: <numbers and urls, or \"none yet\"> — CI: <green / failing: which check / pending / no checks yet>\n\nThen:\nOVERALL: how many peers are up, how many have opened PRs, how many are fully green, and any peer that looks stalled or has failing CI.\n\nBe terse and factual. Do not speculate about causes. Do not recommend taking action — just state what you observed. If everything is fine, say so in one line and stop.",
+      "skills": [
+        "hermes-peer-agents"
+      ],
+      "skill": "hermes-peer-agents",
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "interval",
+        "minutes": 15,
+        "display": "every 15m"
+      },
+      "schedule_display": "every 15m",
+      "repeat": {
+        "times": 12,
+        "completed": 12
+      },
+      "enabled": false,
+      "state": "completed",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-08T20:48:50.855438+00:00",
+      "next_run_at": null,
+      "last_run_at": "2026-10-09T00:00:51.213108+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "last_failure": null,
+      "failure_streak": 0,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "100651143",
+        "chat_name": "M A",
+        "thread_id": null,
+        "user_id": "100651143",
+        "scope_id": null
+      },
+      "enabled_toolsets": null,
+      "workdir": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-09T00:00:19.113281+00:00",
+        "dispatched_at": "2026-10-09T00:00:24.227524+00:00",
+        "lateness_seconds": 5.1,
+        "kind": "on_time"
+      },
+      "fire_claim": null
     }
   ],
-  "updated_at": "2026-10-06T17:04:11.081138+00:00"
+  "updated_at": "2026-10-09T00:00:51.214168+00:00"
 }
