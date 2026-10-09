@@ -120,6 +120,35 @@ PHP code changes, test writing, and API resource transformers.
   the script was first evaluated. Treat "replace the wire call with
   `@js($local)`" as a design decision with this staleness consequence, not a
   mechanical substitution.
+- **`withSchedule()` is invisible to a bare `make(Schedule::class)` in a test.**
+  `ApplicationBuilder::withSchedule()` registers through `Artisan::starting()`,
+  which only fires when the console application is *constructed* — so a plain
+  `app(Schedule::class)->events()` returns zero events even when the wiring is
+  correct, and a test written that way makes a correct fix look broken. Boot the
+  console app first (any `Artisan::call('schedule:list')` does it) before
+  asserting. Reaching the events any other way — hand-resolving the app's own
+  console kernel and calling its `schedule()` override — tests a path production
+  never takes, which is how a dead schedule stays green.
+- **A bare Pest `test()` closure does not bootstrap the app.** Closures get no
+  container, so `app()`/`config()`/`Cache::` fail with
+  `Target class [config] does not exist`. Probe/test anything container-backed
+  from a class extending `Tests\TestCase`.
+- **`Request::setTrustedHosts()` writes Symfony static state that outlives the
+  test.** Set it in one test and every later request to a host outside the
+  allowlist throws. Reset with `Request::setTrustedHosts([])` in `tearDown()`.
+- **Deleting a class in an optimized-autoload project needs
+  `composer dump-autoload`.** A stale classmap entry turns into
+  `include(.../Kernel.php): Failed to open stream` — a class the test asserts
+  is *gone* blows up instead, because `class_exists()` still tries to load it.
+- **A hang produces no test output at all**, so a plain run cannot show you
+  RED. Prove a non-termination fix with a hard timeout and read the exit code:
+  `timeout 60 <test cmd>; echo $?` — `124` means it was killed while hanging.
+  That is your RED evidence; write it in the commit message.
+- **A test that drives a framework class directly asserts framework behaviour,
+  not this app's configuration.** Such a test passes before *and* after the
+  fix, so it is worthless as a gate. Go through the real path (an actual HTTP
+  request through the middleware stack) so the app's configured value is what
+  is under test — and confirm the new test FAILS on the unfixed code first.
 - **`updateOrCreate` overwrites ownership on edit.** When using
   `Model::updateOrCreate(['id' => $editingId], [...])` and one field
   (e.g. `user_id`, `created_by`) should only be set on create — not on

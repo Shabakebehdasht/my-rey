@@ -60,8 +60,7 @@ is not handed over.
 
 ## Scope Discipline
 
-The PR contains **only** the code and tests for this issue, plus the project's
-agent-instruction file if the plan explicitly asked for it.
+The PR contains **only** the code and tests for this issue.
 
 Never let these in:
 
@@ -70,10 +69,58 @@ Never let these in:
   arrival and leave pre-existing modifications uncommitted
 - working notes, plans, scratch files, personal logs
 - refactors or drive-by cleanups that the comment did not ask for
+- **edits to `AGENTS.md` or any other instruction/reference file, ever.** These
+  are protected: writing them blocks the file and bypassing that is forbidden.
+  Finish the code instead, then record in the PR body the exact file, the exact
+  line, what that line should say, and the ready-to-paste replacement text. The
+  reviewer applies it.
 
 Verify before pushing: `git diff upstream/beta...HEAD --stat` must list only
 intended files, and `git status --porcelain` must show nothing staged that you
 did not mean to commit.
+
+## One PR per issue, when several issues share a file
+
+Do not stack unrelated issues into one PR. When the ask is "one PR per issue"
+and two issues legitimately touch the same file (a shared bootstrap/config
+file), split them so each PR stands alone:
+
+1. **Back up every touched file** before splitting (`cp` into a scratch dir) —
+   a later `git checkout <base> -- <path>` discards work you have not committed.
+2. **Branch each issue off the synced base ref, not off your working branch:**
+   `git checkout -b <branch> <base>`. A branch created from your working
+   branch inherits the previous issue's changes.
+3. **Restore only this issue's files/hunks.** For a shared file, apply just
+   this issue's hunk to the branch's pristine copy; strip the other issue's
+   files with `git checkout <base> -- <paths>`.
+4. **Commit scoped by pathspec, not `git add`:** `git commit -F - -- <paths>`.
+   `git add <deleted-file>` fails with a pathspec error when the deletion is
+   already staged, which silently leaves the commit uncreated.
+5. **Never stash per-path to separate work.** `git stash push -- <paths>`
+   errors with a pathspec error on an already-staged deletion and can still
+   create a partial stash, leaving files in an ambiguous state.
+6. Prove isolation per branch before pushing:
+   `git diff --stat <base>..<branch>` lists only that issue's files.
+
+## Tests run serially, always
+
+The Pest suite uses ONE test database. Never run a suite in the background
+while running tests in the foreground — the two interleave on the same
+database and produce a large block of failures that look real and are pure
+contamination. If a contaminated run happens, discard it and re-run alone;
+never report those numbers. Report the clean run only.
+
+When a test failure count is implausibly large, suspect concurrency or
+mid-run edits before debugging the code.
+
+## Verify the claim table, not just the code
+
+Re-derive the numbers the authority comment asserts against the real data, and
+replay the new algorithm against the live rows. A fix that handles the case in
+the report but not the case in the data is the failure mode this catches. When
+a fix's expected output is already documented somewhere (probed counts,
+per-start results), match it — a mismatch means the implementation differs
+from the reviewed design, not that the design was wrong.
 
 ## Verify
 

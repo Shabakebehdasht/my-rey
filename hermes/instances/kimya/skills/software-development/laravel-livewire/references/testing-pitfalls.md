@@ -37,6 +37,18 @@
 | Query-count budget | guess a number | measure once, then set a bound with slack, and skip `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` when counting |
 | Two query-count measurements in one test method | call the query-count helper twice and compare | shared `assertNoNPlusOne`/`assertQueryCount` helpers register a `DB::listen` listener **globally and never unregister it**, so the second measurement starts from the first one's total. Prove "same count at 5 rows and at 20 rows" with separate test methods (or subtests), or reset the counter between measurements |
 
+## Fixture Traps for Graphs & Walks
+
+A test over a hierarchy/relationship walk passes for the wrong reason when the
+fixture does not contain the very thing it asserts.
+
+| Scenario | Wrong | Correct |
+|---|---|---|
+| Prove a walk terminates / a depth guard truncates | seed only the relationship rows | seed the matching **parent rows** too — a final `whereIn` against missing parents silently filters the answer down, so the assertion passes while the walk misbehaves |
+| Prove a cycle is deduped, not truncated | assert only "the call returns" | assert the cycle's own id is **present exactly once** — a bare termination check also passes for a depth cap that silently drops the intended member |
+| A test that only fails by hanging | run the suite and eyeball the diff | `timeout 60 <cmd>; echo $?` — `124` = killed while hanging, i.e. RED |
+| Assert a bound ("the guard truncates the walk") | invent a number | build a chain deeper than the guard with real ids, state the reachable total, assert the returned count is strictly below it, and offset ids clear of the shared fixture rows |
+
 ## E2E Test Structure
 
 ```
