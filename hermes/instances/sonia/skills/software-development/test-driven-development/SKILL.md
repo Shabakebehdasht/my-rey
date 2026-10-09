@@ -352,6 +352,39 @@ Never fix bugs without a test.
 - **Happy path only** — always test edge cases, errors, and boundaries
 - **Brittle tests** — tests should verify behavior, not structure; refactoring shouldn't break them
 
+### Assert on CONTENT, not on size/count
+
+A length assertion is blind to every bug where a producer returns the right
+**number** of items in the wrong **place**. `assertCount(8, $rows)` passes when 8
+rows come back for 8 requested days that are all the *wrong* days — which is
+exactly what a "recompute the range from `now()`" bug produces.
+
+**Rule:** when the correct output is a sequence (time window, axis labels, sorted
+list, page of results), assert the boundary elements and the payload, not the
+length:
+
+```python
+# Weak — passes on wrong data
+assert len(result) == 8
+
+# Strong — fails on wrong data
+assert result[0]["day"] == requested_from
+assert result[-1]["day"] == requested_to
+assert sum(r["count"] for r in result) == expected_total
+```
+
+**A test that passes on the buggy code certifies the bug.** Before shipping a
+regression test, check *why* it was green: if the fixture data sat outside the
+asserted window, the zeros you assert were zeros for the wrong reason. Rewriting
+such a test means moving the fixture **inside** the range under test and asserting
+the aggregate the user sees (e.g. a summary total) equals the sum of the series —
+that cross-check is what catches a silently-dropped row.
+
+**Corollary for "the query still returns the same rows":** a test that only asserts
+a search/list endpoint responds sanely proves nothing about performance or
+correctness of the underlying index. Assert on the *plan* (`EXPLAIN`), or on the
+index definition, or not at all. See `laravel-livewire` for the Postgres recipe.
+
 ## Final Rule
 
 ```

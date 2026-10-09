@@ -42,6 +42,37 @@ echo "Owner: $OWNER, Repo: $REPO"
 
 ---
 
+## 0. Tool choice: `gh` first, GitHub MCP only if verified
+
+Prefer the `gh` CLI for everything in this workflow. The `github` MCP server
+(`mcp__github__*`) keeps a **separate credential** from `gh`, so it can fail with
+`Authentication Failed: Requires authentication` while `gh auth status` reports a
+healthy session — the two never invalidate each other.
+
+When you have both, check `gh auth status` first and use `gh`. If you already used
+MCP and it returned an auth error, do **not** conclude GitHub is unreachable and do
+not start hunting for another token — switch to `gh` and continue. Verify with:
+
+```bash
+gh auth status            # shows which accounts/scopes are live
+```
+
+Cross-repo PRs (a fork's branch into an upstream repo) are a `gh`-first case
+regardless, because the head ref needs the `owner:branch` form:
+
+```bash
+gh pr create -R <upstream-owner>/<repo> \
+  --head <fork-owner>:<branch> --base <base-branch> \
+  --title "..." --body-file <path-to-body.md>
+```
+
+Put long PR bodies in a **file** and pass `--body-file`. It keeps shell quoting out
+of the picture (backticks, `$`, backslashes, and code fences all survive intact)
+and it makes the body reviewable before it is posted. Avoid the `--body` inline
+form for anything longer than a couple of lines.
+
+---
+
 ## 1. Branch Creation
 
 This part is pure `git` — identical either way:
@@ -98,19 +129,17 @@ git push -u origin HEAD
 
 ### Create the PR
 
+**Prefer `--body-file` over `--body`** for anything but a one-liner — see the tool
+choice note in section 0. It keeps shell quoting out of the picture (backticks,
+`$`, backslashes and code fences survive intact) and makes the body reviewable
+before it is posted.
+
 **With gh:**
 
 ```bash
 gh pr create \
   --title "feat: add JWT-based user authentication" \
-  --body "## Summary
-- Adds login and register API endpoints
-- JWT token generation and validation
-
-## Test Plan
-- [ ] Unit tests pass
-
-Closes #42"
+  --body-file /path/to/pr-body.md
 ```
 
 Options: `--draft`, `--reviewer user1,user2`, `--label "enhancement"`, `--base develop`

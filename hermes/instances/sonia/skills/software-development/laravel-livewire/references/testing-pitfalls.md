@@ -49,6 +49,36 @@ These paths have no actor, which breaks any `auth()`/`session()`-based scope.
 | "Unit with zero personnel" fixture | attach the user's backing person to the unit under test | the user factory creates its backing `Person` on the **first existing** unit — create the empty unit *after* the user, or assert on a unit created later |
 | Query-count budget | guess a number | measure once, then set a bound with slack, and skip `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` when counting |
 
+## Proving a Database Index Exists (Postgres)
+
+A search test that only asserts the endpoint answers proves **nothing** about the
+index — the query returns the same rows with or without it, so such a test cannot
+catch a dropped index. Assert on the **plan** or on the **catalog**.
+
+```php
+// The plan is the assertion. enable_seqscan = off is REQUIRED.
+DB::statement('SET LOCAL enable_seqscan = off');
+$plan = implode("\n", array_column(
+    DB::select("EXPLAIN SELECT id FROM tickets WHERE subject LIKE ?", ['%term%']),
+    'QUERY PLAN'
+));
+$this->assertStringContainsString('Bitmap Index Scan', $plan);
+```
+
+| Scenario | Wrong | Correct |
+|---|---|---|
+| Proving a trigram/LIKE index works | assert the search returns rows | `EXPLAIN` + assert `Bitmap Index Scan` |
+| Making the plan observable in a test | run the query as-is | `SET LOCAL enable_seqscan = off` — on a small table the planner picks a seq scan *regardless of existing indexes*, so the test would measure the fixture, not the index |
+| Asserting an index exists | assume the conventional name | query `pg_indexes.indexdef` for `USING gin` / the opclass — generated names often embed the column (`<table>_<column>_unique`) and do not match the migration's variable name |
+| Rolling back one migration in a test | `migrate:rollback --step=1` | `migrate:rollback --path=database/migrations/<that-file>.php` — `--step=1` rolls back whichever is last and silently shifts whenever a migration is appended |
+| Asserting an index was deliberately *not* created | assert on the index NAME | assert on `indexdef` **contents** — the B-tree you are relying on may itself be named after that column |
+
+`enable_seqscan = off` also means a *false* positive is possible in the other
+direction — Postgres can pick an unusable index and pay for it. For a GIN
+trigram index the plan line is unambiguous, so this is safe; for a B-tree a
+`Bitmap Index Scan` is the right signal and a `Seq Scan` under the flag genuinely
+means no usable index.
+
 ## E2E Test Structure
 
 ```
@@ -86,6 +116,28 @@ Pattern:
   pass them: a clearable input appends a trailing space to `placeholder`, so
   `input[placeholder="..."]` matches nothing while the page looks fine — use
   `input[placeholder^="..."]`.
+- **A `wire:ignore` readonly input cannot be typed into.** Date pickers inside
+  `wire:ignore` are driven by their JS widget, not by `fill()`. Find the event the
+  page's own listener binds to (e.g. a picker dispatching `jdp:change` into
+  `$wire.set('prop', …)`) and dispatch exactly that from `locator.evaluate()`, or
+  the test writes a value nothing reads and then asserts on stale state:
+
+  ```ts
+  await page.locator('#some_date_input').evaluate((el, v) => {
+    (el as HTMLInputElement).value = v;
+    el.dispatchEvent(new CustomEvent('jdp:change', { detail: { value: v }, bubbles: true }));
+  }, '1403/10/01');
+  ```
+
+  Cast to `HTMLInputElement` — `evaluate` types the element as `SVGElement | HTMLElement`,
+  so `.value` is a TS error without it.
+- **Assert the rendered axis/payload, not just that the chart container rendered.**
+  `expect(chart).toBeVisible()` passes on wrong data; read the data out of the chart
+  instance (`Highcharts.charts.find(c => c.renderTo.id === 'trendChart').xAxis[0].categories`)
+  and compare it to what was requested.
+- **A test file that only ever asserts visibility is not covering the fix.** When
+  the bug being fixed is in what the chart *shows*, extend the existing suite rather
+  than adding a new file, so the assertion lives next to the fixtures that set it up.
 
 ### Runner lifecycle
 

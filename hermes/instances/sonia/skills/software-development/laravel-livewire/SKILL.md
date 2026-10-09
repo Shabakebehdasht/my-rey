@@ -114,6 +114,24 @@ PHP code changes, test writing, and API resource transformers.
   `Dispatcher`/`Connection`/`Query\Builder` frames to name the caller.
 - **`wire:snapshot` HTML-escaped in the rendered output.** `json_decode` on the
   raw attribute returns null; `html_entity_decode($m[1], ENT_QUOTES)` first.
+- **A window/range constructor that keeps only its LENGTH discards the range.**
+  The shape `between($from,$to)` → `$days = diff + 1` → `new self($days)` then
+  rebuilding `[$from, $to]` from `now()` inside `window()` charts the wrong axis
+  forever, and a LEFT JOIN over that wrong axis **silently drops** rows that were
+  inside the range the user picked. The symptom is a summary total that disagrees
+  with the chart summing it, with no error raised anywhere. Whenever a factory-style
+  method takes two bounds, store both — `?Carbon $from` / `?Carbon $to` — and have
+  the derived accessor return them unchanged; keep the single-argument
+  `lastDays($n)` path deriving from `now()` so `?days=` callers stay untouched.
+- **Carbon 3's `diffInDays()` is SIGNED.** `2026-06-30 → 2026-01-01` returns `-180`,
+  so a `max(1, $days)` clamp on the *count* silently turns an inverted range into a
+  single-day window instead of erroring or normalising. Normalise the bounds first
+  (`if ($from->gt($to)) swap`), then compute.
+- **`now()` is `CarbonInterface`, not `Carbon`.** Storing it in a constructor
+  property typed `?Carbon` passes at runtime but fails PHPStan
+  (`argument.type: CarbonInterface given`). Narrow with
+  `Carbon::instance(now())` — the documented Carbon ≥ 3 conversion — instead of
+  widening the property type or adding a cast.
 - **`updateOrCreate` overwrites ownership on edit.** When using
   `Model::updateOrCreate(['id' => $editingId], [...])` and one field
   (e.g. `user_id`, `created_by`) should only be set on create — not on
@@ -210,6 +228,47 @@ Test contract after the split:
 - Batch level-wise loads (`whereIn('parent_id', $ids)`) rather than one query
   per node, and pin the result with a measured query-count assertion so the N+1
   cannot come back.
+
+## Migrations: driver guards, naming, and capping a window
+
+Copy the **existing** trgm/index migration in the project rather than writing one
+from memory — the established shape is the pgsql guard, the extension enable inside
+it, `IF NOT EXISTS` on every create, and `DROP INDEX IF EXISTS` in `down()`:
+
+```php
+public function up(): void
+{
+    if (DB::getDriverName() !== 'pgsql') {
+        return;               // same early return in down()
+    }
+    DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+    DB::statement('CREATE INDEX IF NOT EXISTS foo_trgm_idx ON foo USING GIN (bar gin_trgm_ops)');
+}
+```
+
+Keep the `IF NOT EXISTS` even when a standalone extension-enabling migration exists:
+it is what lets a fresh database that ran only this migration succeed. `CREATE INDEX`
+(plain, not `CONCURRENTLY`) matches the repo precedent; `CONCURRENTLY` cannot run
+inside a transaction, which `migrate` wraps each migration in.
+
+**Which columns deserve a trigram index** is a judgement call worth stating in the
+PR rather than indexing everything:
+
+- A column already covered by a **B-tree for exact/prefix lookups** does not need
+  one for leading-wildcard `LIKE` unless users genuinely search it by fragment.
+  Every index on a fast-growing table is write amplification — that cost is real
+  and belongs in the argument.
+- Indexing only what a search path actually queries: two surfaces searching the same
+  table over *different* column sets means one index may never be used. Note the
+  asymmetry in the PR so the migration is not read as "all search is indexed", and
+  add a test that pins the deliberate omission so nobody adds it back quietly.
+
+**Unclamped user-supplied windows are a DoS on your own browser.** A date picker
+taking free-text dates has no `ReportDays`-style validator behind it, so a 40-year
+range builds 14610 rows — one chart point each. Clamp in the service that builds the
+window (one place, all callers) and keep the user-visible end bound; a cap that
+silently returns a different range than requested is still a divergence, so anchor it
+to the bound the user picked and assert that.
 
 ## Merge Conflicts in Auto-Generated Files
 

@@ -20,6 +20,61 @@ Use `terminal` to run `gh issue view <N> --comments`. The body is a snapshot fro
 
 Before writing anything, run `gh pr list --search "#<N>" --state all` plus at least two keyword/synonym variants of the symptom (`gh pr list --search "<subsystem> <symptom>" --state open`). Popular issues attract multiple independent fixes; building a duplicate wastes the work and the credit. Also check whether a recent commit already fixed it: `git log --oneline -20 -- <relevant files>`. Done when you know every open PR and recent commit touching this issue, or that none exist.
 
+**The issue body is a snapshot, and it is often wrong about scope.** Treat each
+concrete claim as a hypothesis to re-verify against the code you will actually
+change, not as a spec to transcribe. Build a claim table before coding:
+
+| Claim from the issue | Still true on current code? | Already fixed / partially fixed? |
+|---|---|---|
+
+Two directions matter:
+
+- **Already fixed upstream?** Sync to the canonical base *first* (see the
+  note below), then re-verify. Report in the PR body which claims were stale and
+  implement only what remains — do not redo fixed work.
+- **Contradicted by the code or by a maintainer comment?** The issue thread wins
+  over its own body. Many repos post a "ready for execution" banner saying the raw
+  text is discovery history and that an **expert-review comment plus a maintainer
+  confirmation are authoritative** — those comments routinely *reduce or overturn*
+  the proposed scope. Follow them, and say in the PR body where you deviated and
+  why. A maintainer who closed a decision is the decision.
+
+### 2b. Multiple issues in one request → one branch and one PR each
+
+When the user asks for N issues in N separate PRs, branch each from the **same
+canonical base**, not from your working branch, so no PR contains another PR's
+diff:
+
+```bash
+git checkout -b fix/<slug>-a <canonical-base>
+# …commit only that issue's files…
+git push -u origin fix/<slug>-a
+
+git checkout -b fix/<slug>-b <canonical-base>   # sibling, not a child of a
+# …commit only that issue's files…
+git push -u origin fix/<slug>-b
+```
+
+Staging discipline is what actually enforces this: `git add <explicit paths>`,
+never `git add -A`. Stray untracked files from the other issue sit in the working
+tree and will silently join whichever commit you make next. Park unrelated
+modifications with `git stash push -- <path>` and pop them on the original branch
+at the end. Return to the user's original branch when finished.
+
+### 2c. Instruction files are not yours to edit
+
+Project instruction files (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, anything
+under `docs/`/`references/` that reads as hand-maintained policy) are frequently
+**write-protected**, and a plan that asks for a doc update will fail on them.
+
+**Do not attempt to bypass the protection.** Finish the code, then put the doc
+change in the PR body as *exact ready-to-paste text*: which file, which line, the
+full replacement snippet. This is a normal deliverable, not a compromise — a
+maintainer pastes it in one step, and the intent is not lost.
+
+State plainly in the PR body that the doc edit was skipped and why, so the next
+reader knows it is outstanding rather than forgotten.
+
 ### 3. Validate the premise against current code — and against design intent
 
 Reproduce the bug or demonstrate the missing behavior on the current default branch with a failing test or fixture, using `search_files` and `read_file` to trace the reported path. Then check the second question: is the "bug" actually deliberate design? Run `git log -p -S "<symbol>"` on the code the issue wants changed and read the original commit's intent — a missing link or restriction is often the feature. Challenge stale or flawed issue prose instead of implementing it blindly. Done when the root cause or feature gap is demonstrated in current code AND the change doesn't fight an intentional design.
