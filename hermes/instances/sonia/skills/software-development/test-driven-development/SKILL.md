@@ -175,7 +175,31 @@ Keep tests green throughout. Don't add behavior.
 
 Next failing test for next behavior. One cycle at a time.
 
-## Avoid Horizontal Slices
+### Establish RED when the fix already landed upstream
+
+Sometimes the production code is **already correct** on the base branch — a
+previous PR fixed it and the remaining deliverable is the regression test. Writing
+the test first and watching it pass proves nothing (see the anti-patterns
+section), so manufacture the failure deliberately:
+
+1. Write the test against the correct code as it stands.
+2. Run it — green. Note which assertions actually bite.
+3. **Temporarily re-introduce the exact defect** the test is meant to catch
+   (restore the truthy guard, drop the authorization call, un-guard the
+   predicate).
+4. Run again — the test MUST fail, and it must fail *for the reason you
+   predicted* (e.g. the paginator returns the whole organization, not "1 !== 0"
+   from a typo).
+5. Restore the correct code. Confirm green. `git checkout <file>` is the safe
+   restore when the file is otherwise untouched.
+
+Record both runs in the commit message and the PR body. This is the one case
+where touching production code before the test is correct — the change is
+transient, reverted, and never committed.
+
+**Corollary:** a test that passes on day one because the fix shipped upstream is
+still worth committing, but you must show the RED run before you can claim it
+guards anything. Without it you are shipping a test of unknown sensitivity.
 
 Do **not** write all tests first and then all implementation. That is horizontal slicing: RED becomes "write a pile of imagined tests" and GREEN becomes "make the pile pass." It produces brittle tests because the tests are designed before the implementation has taught you what behavior and interface actually matter.
 

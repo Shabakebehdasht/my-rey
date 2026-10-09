@@ -40,6 +40,79 @@ PHP code changes, test writing, and API resource transformers.
    --generate-baseline` after every fix round, then verify with
    `composer phpstan`.
 
+## Authorization on Livewire Mutators
+
+`mount()` is **not** an authorization boundary. Livewire re-runs route
+middleware on `/livewire/update` only for classes registered via
+`Livewire::addPersistentMiddleware()`; anything else on the route is dropped.
+So a page gated by `role_or_permission:*` (or any custom middleware) whose
+component checks the permission **only in `mount()`** is unguarded for the
+whole life of an open tab: a session whose permission is revoked mid-session
+keeps writing. Every public mutator needs its own `authorize()`.
+
+1. **`authorize()` goes in every mutator, as the first statement.** Read/write
+   methods, and the form-opening methods (`edit()`, `openFormForCreate()`) —
+   they fill public, client-settable component state, which is a read leak
+   before any write. Copy the shape from a component in the project that
+   already does it rather than inventing one.
+2. **Use the permission the page's own `mount()` / route gate uses.** Gating a
+   mutator with a *different* permission than the page is a silent trap: the
+   route gate answers for one capability while the component guards another.
+   Pin the mapping with a test that reads each component's source and asserts
+   every `authorize('…')` call names the page's permission.
+3. **Place the check BEFORE the write, and beware a trailing `mount()`.** A
+   mutator that ends by calling `$this->mount()` to refresh its stats will
+   re-authorize *after* its write — the request 403s while the org-wide update
+   has already committed. Same for a method that dispatches a job before the
+   guard: the job is already queued when the exception fires. Assert on the
+   side effects (no row written, no job pushed), not only the status code.
+4. **An exception assertion alone is not enough.** A mutator that throws a
+   *validation* error also writes nothing, so "no exception and no row" can
+   pass on the wrong behaviour. Assert the 403 **and** the unchanged data.
+5. **A catch-all `catch (\Exception $e)` in front of a toast converts a 403
+   into a 200.** This is why mount-only authorization bugs stay invisible. Catch
+   `AuthorizationException` specifically and re-throw it so the 403 stays
+   distinguishable from a domain failure like a foreign-key violation.
+6. **Revoking a permission in a test needs a cache flush.** `revokePermissionTo()`
+   plus `PermissionRegistrar::forgetCachedPermissions()`, otherwise the gate
+   answers from a warm cache and the test cannot observe the revoke.
+7. **Keep route-middleware persistence a separate decision.** Adding
+   `addPersistentMiddleware(SomeGate::class)` re-runs that gate on every
+   `/livewire/update` in the whole app, including components that rely on the
+   route gate alone. Do not bundle it into a component-authorization fix; it is
+   a different blast radius and belongs in its own change.
+8. **Livewire's test harness already exempts `AuthorizationException`,** so
+   `assertForbidden()` works without extra setup. `RequestBroker` calls
+   `withoutExceptionHandling([HttpException, AuthorizationException, ModelNotFoundException])`
+   — do not write a bespoke `expectException` around these, and do not assume
+   the exemption applies to exceptions you throw yourself from a catch block
+   (it applies to the class, so a re-thrown one is exempt too).
+
+## File Cleanup Tied to an FK Cascade
+
+When a parent row's `ON DELETE CASCADE` removes child rows, the cascade runs in
+the **database, after Eloquent's model events**. Two consequences that decide
+the whole fix:
+
+- A hook on the **child** model never fires on that path at all — the child's
+  rows are gone without Eloquent knowing.
+- The parent's `deleted` event is already too late to read the child's columns.
+
+Collect the paths in the parent's `deleting` hook (before the delete statement
+runs), and delete the child rows explicitly there so the file and its row
+disappear together rather than relying on the cascade. Read the paths with one
+query and delete them in a single **array-form** call
+(`Storage::disk($disk)->delete($paths)`); the local driver ignores missing
+files when the disk sets `throw => false`, so a hand-deleted file still lets
+the row go.
+
+Ship a matching dry-run-first recovery command for the files the old path
+already orphaned — it must delete **files only**: a row whose file is already
+gone is a separate problem, and removing that row would hide it rather than
+report it. Fixture traps for this shape (a migration whose PHP text disagrees
+with the live schema, session-mutating helpers) are in
+`references/testing-pitfalls.md`.
+
 ## Pitfalls
 
 - **`whenLoaded` returns `MissingValue`, not `null`.** When calling

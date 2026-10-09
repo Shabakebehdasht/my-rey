@@ -17,6 +17,8 @@
 | HasFactory on model | `use HasFactory;` alone | `/** @use HasFactory<\Database\Factories\XFactory> */` above `use HasFactory;` |
 | JsonResource magic property | `$this->field` in `toArray()` | `@property-read` annotations + `$model = $this->resource;` with `@var Model $model` |
 | After fixing PHPStan errors | Run `composer phpstan` once | Regenerate baseline: `vendor/bin/phpstan analyse --generate-baseline`, then verify |
+| Editing a single-file Livewire component that has baseline entries | add the `use …;` import you need at the top of the Blade view | Reference the class **fully-qualified** inline instead — the baseline is keyed to the anonymous-class line number (`…roles/index.blade.php:9::$sortBy`), so one added `use` line shifts `return new class extends Component` from `:9` to `:10` and every entry for that file reports as unmatched |
+| CI fails with `Ignored error pattern … was not matched` and no real error | regenerate the baseline (48+ churned entries) | The baseline is line-keyed, so a cosmetic line shift is the cause. Restore the line rather than accepting the churn — regenerating to `:10` re-breaks the moment anyone runs the formatter. Assert the fix with `pint --test` plus `phpstan`, both green |
 
 ## Jobs, Queues & Scheduled Commands
 
@@ -45,9 +47,15 @@ These paths have no actor, which breaks any `auth()`/`session()`-based scope.
 | Scenario | Wrong | Correct |
 |---|---|---|
 | Resolve an auth-scoped id list in `beforeEach` | create + attach a user, then read the scope | `actingAs($user)` first — a create/attach helper does **not** log in, and an `auth()`-based scope resolver returns `[]` |
+| Call a session-mutating fixture helper twice in one test | assume the second fixture is independent | A shared helper that sets `current_unit_id` (or any session key) on the **second** call moves the first actor's own rows out of their scope — the request then 403s and the test is proving the API gate, not the behaviour it was written for. Use one actor/one unit, or re-establish the session before the request under test |
+| Assert a mutator is refused, checking only the response code | `->assertForbidden()` alone | Also assert the side effects did not happen — no row written, no job pushed. A mutator that threw a *validation* error writes nothing too, so a status-only test can pass on the wrong behaviour |
 | Trust a scope you just built | use it directly | `expect($scope)->not->toBeEmpty()` first — an empty scope makes every "excludes X" assertion pass for the wrong reason |
 | "Unit with zero personnel" fixture | attach the user's backing person to the unit under test | the user factory creates its backing `Person` on the **first existing** unit — create the empty unit *after* the user, or assert on a unit created later |
+| Fixture inserting a child row fails on a column you believe is nullable | re-read the migration to check | Query `information_schema.columns` for `is_nullable` — the migration's PHP source does not always match the live schema (e.g. an `unsignedBigInteger()` column that is `NOT NULL` in the database). Let the schema decide the fixture |
+| Livewire mutator must return 403 | write a bespoke `expectException` around the call | `assertForbidden()` works directly — Livewire's `RequestBroker` already calls `withoutExceptionHandling([HttpException, AuthorizationException, ModelNotFoundException])`, and a re-thrown `AuthorizationException` from a catch block is exempt too |
+| A regression test for a bug fixed upstream passes on day one | ship it as proof the guard works | Temporarily re-introduce the defect, watch the test fail for the predicted reason, then restore — see `test-driven-development`, "Establish RED when the fix already landed upstream" |
 | Query-count budget | guess a number | measure once, then set a bound with slack, and skip `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` when counting |
+| Asserting a whole organization must NOT be listed | assert only that a known foreign row is absent | Assert the paginator's `total()` is `0` too, and pin that the fixture's scope really is empty (`assertSame([], $service->scope())`) first — an assertion that passes because the fixture never had a scope proves nothing |
 
 ## Proving a Database Index Exists (Postgres)
 
