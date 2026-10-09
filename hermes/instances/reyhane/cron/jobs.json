@@ -110,66 +110,7 @@
         "kind": "on_time"
       },
       "fire_claim": null
-    },
-    {
-      "id": "cc609d6f880f",
-      "name": "ready-watch-2",
-      "prompt": "You are ONLY observing and reporting.\n\nDO-NOT list (never do any of these):\n- never run gh workflow run\n- never run hermes peer dm\n- never cancel or restart workflow runs\n- never write to, commit to, or push to any repo\n- never fix anything yourself, never comment on an issue, never label anything\n- never close or merge a pull request\n\nContext: issues labelled ready in asgarimehdi/h-dashboard are being implemented by 5 peer agents.\nEach peer works on its own branch in its fork Shabakebehdasht/h-dashboard and opens pull requests\ninto the beta branch of asgarimehdi/h-dashboard.\n\nCurrent assignment:\n- kimya: 900\n- sonia: 857\n- sevda: 894, 873, 893\n- kylie: 886, 858, 897\n- rebecca: 864 (verify-only; it was already merged by PR 896)\n\nAlready merged into beta, nothing to do on those: 895, 891, 892, 880, 888, 890, 870.\n\nWhat to do, read only:\n1. gh pr list -R asgarimehdi/h-dashboard --state open --limit 60 --json number,title,headRefName,url\n2. For each open pull request, run: gh pr checks PRNUMBER -R asgarimehdi/h-dashboard\n   Name every job it reports and mark each PASS, FAIL or PENDING.\n   The three mandatory jobs are: Tests and Coverage, Pint, PHPStan.\n3. gh issue list -R asgarimehdi/h-dashboard --label ready --state open --json number,title\n   to see which assigned issues are still open.\n4. Also check each peer's branch head, since a peer can report success without pushing:\n   gh api repos/Shabakebehdasht/h-dashboard/commits/BRANCH --jq '.sha'\n   Branches to look for: fix/900, fix/857, fix/894-per-page-422,\n   fix/873-ticket-attachment-validation, fix/893-profile-todos-owner,\n   fix/886, fix/858, fix/897.\n\nReporting format: Persian, terse, labelled sections, no filler, no preamble.\nFor each pull request give: PR number, URL, which issue it closes with a Closes line, and the CI job list with each verdict.\nThen one summary line: how many issues are closed, how many PRs open, how many fully green, how many with a failing mandatory job.\nIf a mandatory job fails, quote the exact job name and the exact failure line.\nIf a peer has no branch yet, that is in progress, not a failure. Do not report it as broken.\nIf a pull request closes more than one issue number, flag it explicitly as a scope problem, because this project requires one issue per branch and one pull request per issue.\n\nStop early only when every assigned issue is either closed or has an open pull request.",
-      "skills": [
-        "hermes-peer-agents"
-      ],
-      "skill": "hermes-peer-agents",
-      "model": null,
-      "provider": null,
-      "base_url": null,
-      "script": null,
-      "no_agent": false,
-      "monitor_script": null,
-      "monitor_url": null,
-      "monitor_state": null,
-      "context_from": null,
-      "schedule": {
-        "kind": "interval",
-        "minutes": 15,
-        "display": "every 15m"
-      },
-      "schedule_display": "every 15m",
-      "repeat": {
-        "times": 14,
-        "completed": 8
-      },
-      "enabled": true,
-      "state": "scheduled",
-      "paused_at": null,
-      "paused_reason": null,
-      "created_at": "2026-10-09T15:37:29.571173+00:00",
-      "next_run_at": "2026-10-09T18:06:03.566476+00:00",
-      "last_run_at": "2026-10-09T17:51:03.566476+00:00",
-      "last_status": "ok",
-      "last_error": null,
-      "last_delivery_error": null,
-      "last_delivery_unverified": null,
-      "last_failure": null,
-      "failure_streak": 0,
-      "deliver": "origin",
-      "origin": {
-        "platform": "telegram",
-        "chat_id": "100651143",
-        "chat_name": "M A",
-        "thread_id": null,
-        "user_id": "100651143",
-        "scope_id": null
-      },
-      "enabled_toolsets": null,
-      "workdir": null,
-      "last_dispatch": {
-        "scheduled_at": "2026-10-09T17:50:02.164209+00:00",
-        "dispatched_at": "2026-10-09T17:50:09.484850+00:00",
-        "lateness_seconds": 7.3,
-        "kind": "on_time"
-      },
-      "fire_claim": null
     }
   ],
-  "updated_at": "2026-10-09T17:51:03.567634+00:00"
+  "updated_at": "2026-10-09T22:22:38.939514+00:00"
 }

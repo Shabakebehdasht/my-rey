@@ -69,9 +69,13 @@ hard rule: no machine is ever powered on twice, so every wake must be preceded
 by a check that it is currently off.**
 
 ```bash
-scripts/peer-run-state.sh                            # conflicts first
-scripts/peer-wake.sh [peer ...]                      # default: all five
+bash scripts/peer-run-state.sh                       # conflicts first
+bash scripts/peer-wake.sh [peer ...]                 # default: all five
 ```
+
+Invoke these with `bash <path>`. They are shipped without the executable bit, so
+a bare `scripts/peer-wake.sh` dies with `Permission denied` (exit 126) and
+dispatches nothing — a failure that looks like a bad invocation, not a bad peer.
 
 `peer-wake.sh` is the ONLY sanctioned way to wake peers: per peer it reads
 that peer's workflow runs, skips dispatch when one is `in_progress` or
@@ -115,12 +119,20 @@ hermes peer dm <peer> "<message>"     # prints the peer's reply
 - A peer that was just woken may still be booting. Retry up to 3 times with
   ~20s gaps inside the same call; after that, report `hermes peer list` state
   and move on.
-- Long or multi-paragraph message text (especially non-Latin): keep it in a
-  scratch file and pass `"$(cat file)"` so quoting survives and the text can
+- Long or multi-paragraph message text (especially non-Latin): keep it in
+  a scratch file and pass `"$(cat file)"` so quoting survives and the text can
   be edited without re-typing the whole command.
-- For a batch, use `scripts/peer-dm-batch.sh peer:file ...` instead of hand
+- For a batch, use `bash scripts/peer-dm-batch.sh peer:file ...` instead of hand
   looping: it retries, prints the peer's reply, and does not abort on one
   offline peer.
+- **Two different non-zero exits, and only one is a delivery failure.** `Could
+  not reach peer 'X': ... Connection refused` is a real failure — the box is not
+  answering. `Peer 'X' accepted the message but its turn is still running after
+  600s: the message is already in its Bot Chat (session …) and will be answered
+  there … Do NOT resend` is **delivery success**: the peer has the assignment
+  and is working on it in its own session, and only the reply cannot come back
+  on this call. Do not hand-send it a second DM and do not count it as dropped —
+  see "A timed-out peer reply is delivery, not failure" below.
 
 ## Deferred work
 
@@ -216,6 +228,15 @@ and says "give each one to one of the kids and stay on it until it's done":
    Record each peer's branch sha at assignment time and put that baseline in
    the observer prompt, so "work landed" is read off the sha instead of taken
    from the peer's own claim.
+8. Re-point the observer job whenever the wave moves. A second wave, a peer's CI
+   going red, a correction DM, or a peer taking over — each deletes the old job
+   and creates a new one (`hermes cron delete <id>` then
+   `hermes cron create ... --repeat N --skill hermes-peer-agents`). The new
+   prompt carries the updated peer-to-issue-and-PR map PLUS the corrections you
+   have already sent, by name: a job that does not know an in-flight fix will
+   report it as news every tick, and the user re-reads the same failure three
+   times. Name the PRs, the failing test and the symptom, and tell the observer
+   explicitly that anything else is what it should be reporting.
 
 See `references/work-assignment.md` for the triage commands, the prompt
 skeleton and the observer job recipe.
@@ -348,6 +369,51 @@ about. Read the file off the fetched ref instead (`git show <ref>:<path>`,
 upstream, say so to the user with the artifact that proves it, rather than
 passing the item on as if it were open.
 
+### A peer's fix can turn a pre-existing test RED — that is the fix working
+
+A fix that closes a disclosure (a bare `whereIn` replacing an org-wide query, a
+`?->` replacing a null-dereference) makes every test that pinned the OLD leaking
+behaviour fail, because its fixture now resolves to nothing where it used to
+return a row. The peer that reports "two existing tests in a file I don't own
+now fail, and I did not touch them" is describing a correct fix, not a bug it
+introduced.
+
+Correct it with the exact fixture change (which column the fixture was missing,
+e.g. a row created without the parent column that the scope predicate walks),
+tell it to keep the assertion and move the FIXTURE into the caller's own scope so
+the test's original intent survives, and require the reason recorded in the PR
+body so a later reader does not assume the assertion was weakened for
+convenience.
+
+**The line-ownership rule is about concurrent edits, not permanent ownership.**
+A prompt saying "that file belongs to another peer" stops two peers editing one
+file at the same time. Once the other peer's work is committed and its PR is
+open, the file is no longer being edited — so the peer holding the PR may fix
+the fallout. Say that in the correction, or it obeys the stale rule, reports the
+block, and the job stays red.
+
+### A timed-out peer reply is delivery, not failure
+
+The DM helper reports a non-zero exit when a peer takes longer than its budget,
+and the two cases read very differently:
+
+    Could not reach peer 'x': <urlopen error [Errno 111] Connection refused>
+    Peer 'x' accepted the message but its turn is still running after 600s:
+    the message is already in its Bot Chat (session …) and will be answered
+    there. The reply cannot come back on this call. Do NOT resend.
+
+The first is a real delivery failure — retry it, and if the box is up but the
+refusals were from before it finished booting, the in-flight retry succeeds on
+its own. The second is **success with no reply channel**: the peer has the
+assignment and is executing it in its own session, and the work will show up as
+a branch sha and a PR. Do not re-send, do not count it as dropped, and do not
+re-dispatch its workflow.
+
+Since a busy peer's reply is unreachable by design, do not hold the batch on it.
+Run the DM loop in the background and verify the work the only way that works:
+against branch shas and PRs. A peer's own claim is worth nothing here — a peer
+reports "accepted, turn still running" whether or not it then does anything.
+
 ### A peer accepted the DM but never acted — take the item yourself
 
 Delivery success is not progress. A peer can report `DELIVERED` (exit 0) and
@@ -387,19 +453,30 @@ before the approval.
 ### A red mandatory CI job: read the log and send the diagnosis
 
 `gh pr checks` yields the verdict and nothing else. Get the assertion before
-writing to the peer — `gh pr view <n> -R <upstream> --json files` to find the run,
-then `gh run view <run-id> -R <upstream> --log-failed` (logs need the run to have
-completed; `gh run view <id> --json jobs` names the failing job first). Strip ANSI
-with `sed 's/\x1b\[[0-9;]*m//g'` or the output is unreadable. Then send the peer
-the failing test name, the literal failure line, and your inferred root cause.
+writing to the peer: `gh pr view <n> -R <upstream> --json files` to find the run,
+then `gh run view <run-id> -R <upstream> --json jobs` to name the failing job and
+its id, then fetch that job's log with `curl -sL` (see
+`references/ci-failure-diagnosis.md`). Strip ANSI with
+`sed 's/\x1b\[[0-9;]*m//g'` or the output is unreadable. Then send the peer the
+failing test name, the literal failure line, and your inferred root cause.
+
+**Triage across the whole batch before blaming one peer.** `gh pr checks` on
+every open PR in the batch, then compare the failing test names. The same
+assertion failing in several unrelated PRs — none of whose diffs touch that test
+or file — is a pre-existing base-branch flake, not a regression. One `gh api ...
+/pulls/<n>/files --paginate --jq '.[].filename'` per PR settles the "none of
+them touched it" half. Dispatch ONE test-only fix for the flake, and tell every
+other peer which failure to ignore by name so they each stop trying to fix their
+own PR. The full recipe, plus the position-vs-identity flake mechanism, is in
+`references/ci-failure-diagnosis.md`.
 
 The root cause worth naming: the new test asserts on runner-specific OUTPUT — a
-summary word like "passed", a pass COUNT, a duration — while CI's PHP version or
-environment causes some OTHER test to skip, so the marker never appears. That is
-a test-quality defect, not a flaky run. The fix is to re-key the assertion to the
-IDENTITY of the thing under test (its own test name, its own output) instead of a
-summary line, and to keep the negative assertions that prove the old broken shape
-fails.
+summary word like "passed", a pass COUNT, a duration, a row position — while
+CI's PHP version, environment or insertion order makes the marker land
+elsewhere, so it never appears. That is a test-quality defect, not a flaky run.
+The fix is to re-key the assertion to the IDENTITY of the thing under test (its
+own test name, its own output, its own row's id) instead of a summary line, and
+to keep the negative assertions that prove the old broken shape fails.
 
 Require RED against the pre-fix code shape and GREEN against the fixed one. A test
 that passes both ways pins nothing, however green CI looks.

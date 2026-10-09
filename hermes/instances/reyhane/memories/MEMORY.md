@@ -11,3 +11,5 @@ e2e/env rules: scripts/e2e-test.sh not concurrency-safe (never two runs; .env.de
 homeassistant is permanently deny-listed in ~/.hermes/config.yaml (plugins.disabled) — never re-enable or `hermes plugins install` it; it was never installed here.
 §
 Peer wake-up single-instance rule (kylie/sonia/kimya/sevda): only ONE run per machine may be in_progress. Always `gh run list -R Shabakebehdasht/<repo> --json databaseId,status,conclusion` before dispatching; if a run is in_progress, do NOT start another — cancel the newer duplicate instead. Concurrent runs clash (both sync hermes state and claim the tailscale hostname).
+§
+h-dashboard: default branch = main, PRs merge into beta, so "Closes #N" does not auto-close the issue (only default-branch merges close them).
