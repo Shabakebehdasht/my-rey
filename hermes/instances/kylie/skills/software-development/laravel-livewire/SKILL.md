@@ -23,6 +23,11 @@ PHP code changes, test writing, and API resource transformers.
 ## Always-On Rules
 
 1. **Run Pint before commit.** `vendor/bin/pint --dirty` is enforced in CI.
+   When a previously-clean file fails after your edit, the failure is yours:
+   run `pint <file>` (fix mode, not `--test`), then confirm with `git diff`
+   that every removed line is one you added — a fixer touching pre-existing
+   lines means you are reformatting code you do not own. Attribute first
+   with `git stash` + `pint --test` on the pristine file when in doubt.
 2. **Clear config+route cache before running tests.** Stale `routes-v7.php`
    causes Livewire endpoint-hash mismatch — tests silently return 404 on
    `->set()`/`->call()`.

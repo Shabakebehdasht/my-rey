@@ -17,6 +17,7 @@
 | HasFactory on model | `use HasFactory;` alone | `/** @use HasFactory<\Database\Factories\XFactory> */` above `use HasFactory;` |
 | JsonResource magic property | `$this->field` in `toArray()` | `@property-read` annotations + `$model = $this->resource;` with `@var Model $model` |
 | After fixing PHPStan errors | Run `composer phpstan` once | Regenerate baseline: `vendor/bin/phpstan analyse --generate-baseline`, then verify |
+| Baseline diff after regenerating | Trust it because the count is unchanged | A line-keyed baseline embeds the anonymous-class line (`:16::` vs `:19::`), so added `use` imports shift every entry: verify the diff is balanced (equal insertions/deletions) and that every added message is the shifted twin of a removed one — a genuinely new `identifier` or path is a real suppressed error, not a shift |
 
 ## Factory Creation Checklist
 

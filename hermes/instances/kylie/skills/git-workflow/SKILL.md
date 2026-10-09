@@ -88,9 +88,28 @@ git diff --stat HEAD <ref> -- path     # what changed vs checkout
 Run these as small batches with explicit timeouts — one oversized shell call
 dying takes every command's output down with it.
 
+### `git -c` is a top-level option: equals form, before the subcommand
+
+`git -c` takes a single `name=value` argument and must precede the
+subcommand. `git commit -c user.name=x -m ...` fails (`-m` and `-c`
+cannot be combined there), and the space form `git -c user.name "x"`
+treats the next word as the git command (`git: 'x' is not a git
+command`). On a machine with no identity configured, prefer the
+persistent fix the skill already documents:
+
+```bash
+git config user.email "user@users.noreply.github.com"
+git config user.name "username"
+```
+
+One-shot form when config must not persist:
+
+```bash
+git -c user.name=username -c user.email=user@users.noreply.github.com commit -m "..."
+```
+
 ### Missing git identity on fresh clones
 
-New clones may lack both global and per-repo `user.name`/`user.email`.
 Commits fail with `empty ident name`.
 
 **Fix — set per-repo config before first commit:**
