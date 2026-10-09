@@ -1,18 +1,12 @@
-# Managed by RemoteHermes — template v1 (regenerated on Update; manual edits are overwritten)
+# Managed by RemoteHermes — template v2 (regenerated on Update; manual edits are overwritten)
 name: reyhane
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'
   workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 340
     env:
       REPO_ORIGIN: https://github.com/Shabakebehdasht/h-dashboard.git
