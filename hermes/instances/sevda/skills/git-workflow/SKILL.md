@@ -126,6 +126,63 @@ git config user.name "username"
 
 Detect from `gh auth status` or set manually.
 
+## Multiple PRs from one working branch
+
+GitHub permits only ONE open PR per (head, base) pair, so a task asking for N
+separate PRs out of a single working branch cannot open the second one against
+that branch. The obvious workaround is worse than the limitation: branching the
+second PR off the working-branch tip makes it carry the FIRST issue's commits,
+so the "one PR per issue" split is silently gone.
+
+**Rule: every additional PR gets its own head branch cut from the BASE commit,
+containing only that change.** Verify containment from the remote, never from
+memory of what you committed:
+
+```bash
+gh pr view <N> -R <org>/<repo> --json files -q '.files[].path'
+```
+
+Build each side branch in a worktree — it leaves the working branch and its
+index/stash untouched, which matters when branch-switching is forbidden:
+
+```bash
+git worktree add ../<repo>-<n> -b fix/<n>-<slug> <base-commit>
+cd ../<repo>-<n>
+git cherry-pick <commit-for-this-issue>
+git diff --stat <base-commit>          # must list ONLY this issue's files
+```
+
+After all PRs are open, drop the worktrees (`git worktree remove --force <path>`).
+
+**An open PR whose head is wrong:** close it and reopen on the correct branch.
+`gh pr edit` has no `--head` flag, and `gh api -X PATCH .../pulls/N -f head=...`
+returns HTTP 200 while **silently keeping the old ref** — always re-read
+`.head.ref` (or `.files`) afterwards to confirm the change landed.
+
+**Move/create a branch ref without force-deleting:** `git branch -f <name> <commit>`
+works where `git branch -D` may be gated.
+
+### A worktree needs its own runtime wiring
+
+A fresh worktree has no `.env`, `vendor/`, or `node_modules`. Symlink the
+dependency directories instead of reinstalling:
+
+```bash
+ln -s /path/to/main/vendor vendor
+ln -s /path/to/main/node_modules node_modules
+```
+
+For the env, prefer exporting the few variables the test run actually needs
+over copying `.env` — and export the drivers explicitly, because the main
+checkout's cached config otherwise leaks in and produces failures that look
+like real test failures:
+
+```bash
+APP_ENV=testing CACHE_STORE=array SESSION_DRIVER=array QUEUE_CONNECTION=sync \\
+DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_DATABASE=... DB_USERNAME=... \\
+DB_PASSWORD=... php artisan test
+```
+
 ## Verification
 
 - `git status` shows no unexpected submodule entries.

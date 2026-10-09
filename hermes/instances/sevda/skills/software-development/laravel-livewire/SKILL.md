@@ -96,6 +96,39 @@ PHP code changes, test writing, and API resource transformers.
   (`orderBy()`/`limit()` before `get()`) still reports; that residual goes into
   the regenerated baseline (Always-On rule 6). The root fix is larastan, which
   this project does not run.
+- **A toast/flash helper that only `return`s records NO assertion.** Pest/PHPUnit
+  mark a test with zero assertions as *risky* (non-blocking, easy to ignore), so a
+  helper typed `: void` that silently returns on success makes every caller vacuous —
+  the test passes without ever checking the thing. Return the matched value so the
+  caller can assert on it (`expect($helper(...))->toContain(...)`). When a suite
+  reports a nonzero risky count, read it as "which tests assert nothing", not as
+  noise — the project baseline for it is usually 0-2.
+- **Toast/flash text is a JS effect, not rendered HTML.** `assertSee()` can never
+  find it. Toast traits push `effects['xjs']` entries whose `expression` is a nested
+  JSON string (`toast({...})`), so decode the inner JSON first — and the message text
+  then arrives `\uXXXX`-escaped, which is why a raw `str_contains` on Persian text
+  fails. When fixing this in an existing suite, extend the existing helper rather
+  than adding a second one.
+- **An interpolatable array is a swallowed exception, not a notice.** Building a
+  message string with `{$results['errors']}` when `errors` is an array raises
+  `Array to string conversion`; the framework's error handler turns any reported
+  level into `ErrorException`, and a nearby `catch (\Exception)` then swallows it —
+  making every statement AFTER the interpolation unreachable, including
+  `resetForm()` and any `$this->dispatch(...)`. Symptom: a success path reports
+  failure and a parent-refresh event has never fired, while the DB rows are written
+  (so `assertDatabaseHas` stays green). Count the value (`count($x ?? [])`) instead of
+  interpolating it, and check the file for the idiom already used nearby.
+- **A regression test must assert the side effect a `catch` block can swallow.**
+  For a success-path bug, three assertions are load-bearing and not
+  interchangeable: the success message, that the reset/`reset*()` state actually
+  cleared, and `assertDispatched('<event>')`. The event assertion is what stops the
+  regression returning silently, because the database write succeeds on both old and
+  new code. A zero-error fixture is the case that fails; an errored fixture would
+  exercise the same catch for a legitimate reason and hide the defect.
+- **`whereIn` at the top of a chain breaks later Eloquent-only calls.** See the
+  PHPStan pitfall above — putting an IN-filter inside a trailing
+  `->where(fn ($q) => $q->whereIn(...))` closure keeps the receiver an Eloquent
+  builder, so a following `whereHas()` still resolves.
 - **`updateOrCreate` overwrites ownership on edit.** When using
   `Model::updateOrCreate(['id' => $editingId], [...])` and one field
   (e.g. `user_id`, `created_by`) should only be set on create — not on
@@ -177,5 +210,5 @@ The regenerate step produces the correct baseline for the current code state.
 ## Testing Patterns
 
 See `references/testing-pitfalls.md` for the full decision table on
-assertion patterns, factory creation, scope/fixture traps, and E2E test
-structure.
+assertion patterns, factory creation, scope/fixture traps, Livewire toast/effect
+assertions, and E2E test structure.

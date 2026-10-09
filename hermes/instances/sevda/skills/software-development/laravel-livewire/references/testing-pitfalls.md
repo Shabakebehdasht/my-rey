@@ -37,6 +37,21 @@
 | "Unit with zero personnel" fixture | attach the user's backing person to the unit under test | the user factory creates its backing `Person` on the **first existing** unit — create the empty unit *after* the user, or assert on a unit created later |
 | Query-count budget | guess a number | measure once, then set a bound with slack, and skip `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` when counting |
 
+## Livewire Effects & Success-Path Assertions
+
+| Scenario | Wrong | Correct |
+|---|---|---|
+| Assert a toast/flash message | `assertSee('…')` | read `effects['xjs']` → `json_decode` the inner `toast({…})` → compare (text is `\uXXXX`-escaped) |
+| Reuse an existing toast helper | `assertSee` on rendered HTML | extend the suite's helper; don't add a second one |
+| Helper that "passes" by returning | `: void` + bare `return` | return the matched value so the caller asserts; a void helper makes the test *risky* (0 assertions) |
+| Suite reports N risky tests | treat as noise | they are the tests asserting nothing; fix each, then re-check the count |
+| Message string built from a possibly-array value | `"…{$results['errors']}"` | `count($results['errors'] ?? [])` — interpolation raises `Array to string conversion` |
+| A `catch (\Exception)` sits after that message | assume it's defensive | it is swallowing the interpolation `ErrorException`; every later statement (reset + dispatch) is unreachable |
+| Rows written but UI says "failed" | suspect the DB | it's false reporting — writes commit before the message is built; don't describe it as lost writes |
+| Regression test for a swallowed success path | only `assertDatabaseHas` | assert success message **and** reset state **and** `assertDispatched('<event>')` — the write passes on old code too |
+| Fixture for a bug that only fires on success | an errored fixture | a zero-error fixture; an errored one exercises the same catch legitimately |
+| Prove the new test actually bites | trust it went red once | stash the implementation and re-run — confirm it fails at the intended assertion |
+
 ## E2E Test Structure
 
 ```
