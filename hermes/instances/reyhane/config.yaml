@@ -174,3 +174,5 @@ bot_peers:
     url: http://sonia:8642
   kylie:
     url: http://kylie:8642
+  candle:
+    url: http://candle:8642
