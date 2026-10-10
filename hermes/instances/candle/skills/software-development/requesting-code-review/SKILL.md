@@ -109,6 +109,8 @@ which go && go vet ./... 2>&1 | tail -10
 **Baseline comparison:** If baseline was clean and your changes introduce failures,
 that's a regression. If baseline already had failures, only count NEW ones.
 
+Checked-in analyzer baselines (PHPStan, mypy, etc.): regenerate after the change and require zero added suppressions. A new ignore entry means fresh debt got suppressed instead of fixed — type the code until the analyzer is clean, then regenerate.
+
 ## Step 4 — Self-review checklist
 
 Quick scan before dispatching the reviewer:

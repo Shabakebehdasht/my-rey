@@ -115,6 +115,16 @@ Closes #42"
 
 Options: `--draft`, `--reviewer user1,user2`, `--label "enhancement"`, `--base develop`
 
+### Targeting upstream from a fork
+
+When `origin` is a fork, `gh pr create` opens the PR in the fork by default — upstream never sees it and the mistake is invisible in local test results. Always name the upstream explicitly:
+
+```bash
+gh pr create -R upstream-owner/upstream-repo --base <upstream-branch> --head <fork-owner>:<branch> --title "..." --body "..."
+```
+
+Verify the returned PR URL points at the upstream repo, not the fork.
+
 **With git + curl:**
 
 ```bash

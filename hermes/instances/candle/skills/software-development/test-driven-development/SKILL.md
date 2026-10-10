@@ -351,6 +351,7 @@ Never fix bugs without a test.
 - **Testing implementation details** — test behavior/results, not internal method calls
 - **Happy path only** — always test edge cases, errors, and boundaries
 - **Brittle tests** — tests should verify behavior, not structure; refactoring shouldn't break them
+- **Fixtures that pass for the wrong reason** — set ownership and actor fields explicitly in every fixture when testing scope or permission predicates. Factory defaults (null owner, orphan rows) can satisfy the wrong branch and green a test that proves nothing; confirm each new test fails before the fix, not just alongside it.
 
 ## Final Rule
 
