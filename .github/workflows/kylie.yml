@@ -4,6 +4,10 @@ name: kylie
 on:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -266,6 +270,7 @@ jobs:
             echo "TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}"
             echo "TELEGRAM_HOME_CHANNEL=${TELEGRAM_ALLOWED_USERS}"
             echo "GITHUB_TOKEN=${GH_TOKEN}"
+            echo "HERMES_PEER_CANDLE_KEY=${HERMES_API_KEY}"
             echo "HERMES_PEER_KIMYA_KEY=${HERMES_API_KEY}"
             echo "HERMES_PEER_REBECCA_KEY=${HERMES_API_KEY}"
             echo "HERMES_PEER_REYHANE_KEY=${HERMES_API_KEY}"
