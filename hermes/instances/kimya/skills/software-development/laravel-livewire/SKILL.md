@@ -185,6 +185,56 @@ PHP code changes, test writing, and API resource transformers.
       $model->update(['user_id' => Auth::id()]);
   }
   ```
+- **A route's permission middleware does NOT run on `/livewire/update`.** The
+  gate on the `Route::livewire(...)` line authorises the initial page GET only;
+  every later mutation is a separate request to the Livewire update endpoint.
+  Livewire re-applies a **fixed** list — `PersistentMiddleware::$persistentMiddleware`
+  in `vendor/livewire/livewire/src/Mechanisms/PersistentMiddleware/PersistentMiddleware.php`
+  — containing `Authenticate`, `Authorize`, `SubstituteBindings` and Sanctum's
+  stateful middleware, and **no permission/role middleware**. Verify before
+  claiming a hole: read that static array, and check whether the app calls
+  `Livewire::addPersistentMiddleware()` (most apps do not). So **every mutating
+  method in a gated component needs its own `$this->authorize('the.permission')`**
+  — the route group is not a backstop, and
+  a component that skips it keeps working after the permission is revoked. Audit
+  for this with `grep -c 'authorize(' <component>` — zero in a gated, mutating
+  component is a finding, and it is silent.
+  **Put the check first, and re-throw it past any `catch`.** A mutator that wraps
+  its body in `catch (\Exception $e)` turns the `AuthorizationException` into a
+  friendly toast — a 403 comes back as a 200 and looks like an ordinary failure,
+  which is what made the original bug invisible. Add the check as the first
+  statement (before `validate()`, before scope checks, before any query), and
+  where a catch exists add a preceding clause that re-throws:
+  ```php
+  try {
+      $model->delete();
+  } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+      throw $e;                       // keep 403 distinguishable from a real failure
+  } catch (\Exception $e) {
+      $this->error('…', position: 'toast-bottom');
+  }
+  ```
+  Two traps make this bite. First, **the exception type must be the fully-qualified
+  one** unless the file imports it — a `use`-less short name in a component that
+  catches `\Exception` never matches. Second, **a permission name typo fails
+  closed and turns green CI into a locked-out app**: `authorize('manage_hardware')`
+  for a permission that does not exist returns `false` rather than throwing, so
+  every user is refused and the tests still pass. Always include a **positive**
+  test asserting a user who *holds* the permission can still call the mutator —
+  negative tests alone cannot catch this.
+  **No import needed:** `Livewire\Component` already `use`s
+  `AuthorizesRequests` (`vendor/livewire/livewire/src/Component.php`), so
+  `$this->authorize()` is available in every component. Adding the trait to a
+  component that already works is redundant copy-paste.
+- **`Model::whereIn(...)->update()`/`->delete()` fires no model events**, so any
+  observer (audit trail, cache flush, `updated_at` maintenance) never runs. The
+  single-row path goes through the model and writes its audit row; the bulk twin
+  bypasses it and writes none. If the model has no `SoftDeletes`, the bulk delete
+  is unrecoverable and the audit-based restore has nothing to read. A code comment
+  admitting *"bulk update bypasses Eloquent events"* is the tell — it means the
+  cache half was fixed and the audit half was not. Use the observer's explicit
+  bulk entry point (`recordBulkAudit()`-style) rather than iterating models, which
+  trades the missing audit for an N+1.
 
 ## Extracting a Reusable Nested Component
 

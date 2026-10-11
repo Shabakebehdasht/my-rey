@@ -63,11 +63,30 @@ Audit depth follows the **effort level** (default `standard`):
 
 Whatever the level, say in the final report what was *not* audited.
 
+**A truncated subagent summary means findings you have not read yet.** Long
+audits come back with the middle elided and a pointer to a file on disk
+(`read_file <path> offset=…`). That elided middle routinely holds the
+best-evidenced findings — the ones with commands, diffs and line numbers —
+while head and tail carry the prose summaries. Page the whole file before
+presenting anything, or you will hand the user a table that silently omits
+their best evidence. A child that reports `status=completed (hit max_iterations)`
+did **not** finish its assignment: treat its categories as partially audited and
+say so, rather than letting a truncated pass read as full coverage.
+
 Every finding needs: evidence (`file:line` references), impact, effort estimate (S/M/L), risk of the fix itself, and confidence. No vibes-only findings.
 
 ### Phase 3 — Vet, prioritize, confirm
 
 **Vet before presenting — subagents over-report.** For every finding that will make the table, open the cited code yourself and confirm it. Expect three failure classes: **by-design behavior** reported as a bug or vulnerability; **mis-attributed evidence** (real finding, wrong file or line); and duplicates across subagents. Downgrade, correct, or reject accordingly.
+
+Vet with commands, not by re-reading the subagent's prose. Four checks earn their keep:
+
+- **Execute the claim when it is behavioural.** "This throws `DivisionByZeroError`" is settled by running it, not by reading the arithmetic. Same for "this helper is a no-op" — grep the framework source for the exact selector and read what the runtime actually applies.
+- **Prove the framework mechanism, never assert it from memory.** The highest-leverage findings usually rest on a framework default, and the cheapest way to be wrong is to assume one. Before reporting "route middleware does not run on this endpoint", read that framework's own middleware list and check whether the app overrides it. A finding whose whole weight is an unverified framework default is the one most likely to be wrong — and also the most embarrassing to present.
+- **Negative counts prove absence weakly; positive hits prove presence.** A reported `grep -c` of 0 may have grepped the wrong tree. Re-run it yourself.
+- **Check the project's own intent docs before reporting a rule violation.** `AGENTS.md` / `README` / ADRs usually record the decision, and often record that the pattern was fixed once and not everywhere — in which case the finding is the *remaining* sites, not the concept. A source comment admitting a known limitation is evidence the author knew; cite the finding as what they missed. And never report a doc's factual claim as fact without opening the source: stale counts in a contract doc are a genuine finding precisely because someone checked.
+
+Report the vet explicitly with a short **rejected / by-design** section listing what you investigated and cleared. It is what makes the surviving table trustworthy, and it saves the maintainer re-deriving risks you already closed.
 
 Present the vetted findings table to the user, ordered by leverage (impact ÷ effort, weighted by confidence):
 
@@ -91,6 +110,31 @@ plans/
 ```
 
 **Excerpts come from your own reads, never from a subagent's report.** Before writing each plan, open every cited file yourself.
+
+Re-verify at *write* time, not just at audit time. A plan is a list of literal
+instructions, so a claim that was merely plausible when you vetted it becomes a
+wrong instruction the moment the executor obeys it. Re-open the file and confirm
+each **structural** claim — "this method has no try/catch", "this component has
+no `mount()`", "this file is identical to its three siblings" — from the full
+method body, not from a partial excerpt you read during Phase 3. Excerpts taken
+from a truncated window are the ones that mislead. When you find a wrong
+instruction, fix the plan *and* re-check the sibling claims you derived from the
+same read.
+
+**Before proposing a new test file, look for an existing sweep over the same
+class of files.** Test suites that fixed one instance of a repeating defect often
+end with a source-scanning test holding a hardcoded map of the files already
+fixed. Those maps are the cheapest possible regression net and they are almost
+never complete — extending the map is strictly better than writing a parallel
+file, because a duplicate suite rots independently and the executor will not
+know the other one exists. Grep the test tree for the sweep's assertion shape
+before authoring anything.
+
+**Run your own done-criteria commands before publishing them.** A `grep -c`
+threshold, a `--list-tests` count, or a baseline gate written from memory is
+untested advice. Execute each one, record the real output, and put the observed
+numbers in the plan — both so the executor knows what "clean" looks like and so a
+command that was wrong on its first run gets fixed before it reaches anyone.
 
 Before writing anything: record `git rev-parse --short HEAD` — every plan stamps the commit it was written against.
 

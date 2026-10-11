@@ -60,8 +60,30 @@ tests/e2e/<feature>/<feature>.spec.ts
 
 Imports from `../shared/fixtures`:
 - `login(page, nCode?, password?)` — fills login form, waits for redirect
-- `waitForLivewire(page)` — waits for `.wire-loading` to disappear
+- `waitForLivewire(page)` — **NOT a working gate; see below**
 - `waitForToast(page, text?)` — waits for toast notification
+
+### `waitForLivewire` is an inert gate — do not rely on it
+
+The common `waitForLivewire(page)` helper polls for a `.wire-loading` element.
+**No element ever gets that class.** `wire:loading` is a *directive* that toggles
+`style.display` on its own element (`toggleBooleanStateDirective` in
+`vendor/livewire/livewire/dist/livewire.esm.js`); the only occurrence of the
+string `wire-loading` in the bundle is a source-path comment. So the helper's
+first clause — "no `.wire-loading` element exists" — is always true and it
+resolves instantly.
+
+Everything asserted after it may therefore read a half-morphed DOM. Verify the
+helper is real before trusting any suite that calls it:
+`grep -o '.\{80\}wire-loading.\{80\}' vendor/livewire/livewire/dist/livewire.esm.js`
+— empty output means the selector is dead.
+
+**Prefer a positive wait on the thing you actually expect to change:**
+`await expect(locator).toHaveCount(n)`, `expect.poll(() => locator.count())`, or
+`waitForSelector(selector, { state: 'visible' })`. When you must wait on the
+request itself, wait on an element that actually carries `wire:loading` /
+`wire:target`, e.g. `page.locator('[wire\\:loading]').first().waitFor({ state: 'hidden' })`
+— and note that resolves only for directives the template really renders.
 
 Pattern:
 1. `test.beforeEach` — login + navigate to page
@@ -69,10 +91,9 @@ Pattern:
 3. Test: CRUD operations via Livewire modals
 4. Use `page.locator('input[wire\\:model="field"]')` for Livewire inputs
 5. Use `page.getByRole('button', { name: '...' })` for buttons
-6. Always `waitForLivewire(page)` after actions that trigger updates
-7. Prefer `expect.poll(() => locator.count(), { timeout })` over fixed sleeps for
-   anything a `wire:click` changes — `waitForLivewire` only helps when the
-   template actually renders `.wire-loading`.
+6. After any action that triggers an update, wait on a **positive** signal for
+   the change (count, text, visibility) — not on `waitForLivewire`.
+7. Prefer `expect.poll(() => locator.count(), { timeout })` over fixed sleeps.
 
 ### Assertions on seeded data
 
@@ -86,7 +107,7 @@ Pattern:
   counts are reproducible — a count-based guess is what fails:
   `psql -h 127.0.0.1 -U <user> -d <e2e_db> -tAc "SELECT count(*) FROM units WHERE name LIKE '%x%'"`
 - **Match component-rendered attributes by prefix.** Wrappers rewrite what you
-  pass them: a clearable input appends a trailing space to `placeholder`, so
+  passes them: a clearable input appends a trailing space to `placeholder`, so
   `input[placeholder="..."]` matches nothing while the page looks fine — use
   `input[placeholder^="..."]`.
 
@@ -99,3 +120,98 @@ Pattern:
   matches itself and SIGTERMs the job you are still running. Bracket one
   character — `pkill -f "port=800[1]"` matches the server but not the command
   that mentions it.
+
+## Testing a Repeated Defect Across Many Files
+
+When a defect class repeats across N sites (a missing gate, a missing index, a
+missing `authorize()`), the tests that protect the fix have to repeat across N
+sites too — and the N-1th one you skip is the Nth regression.
+
+### Extend the sweep before writing a parallel suite
+
+A codebase that fixed one instance of a repeating defect often ends with a
+**source-scanning test** holding a hardcoded map of the files already fixed.
+
+```php
+$source = [
+    'resources/views/livewire/roles/index.blade.php' => 'manage_roles',
+    'resources/views/livewire/permissions/index.blade.php' => 'manage_roles',
+];
+foreach ($source as $file => $permission) {
+    preg_match_all("/authorize\('([^']+)'\)/", file_get_contents(base_path($file)), $m);
+    // assert every found name equals $permission
+}
+```
+
+**Grep for the sweep's assertion shape before authoring anything new.** A
+duplicate suite rots independently and the executor does not know the other one
+exists. Extending the map is strictly better: it inherits the existing
+explanation, the already-fixed files as precedent, and the exact `preg` shape the
+author tuned.
+
+Two sweeps usually coexist and both are worth extending:
+
+| Sweep shape | Asserts | Add a file when |
+|---|---|---|
+| every `authorize('X')` in the file names one permission | a mistyped permission | any file gains an `authorize()` call |
+| every `catch` of the exception type re-throws | the clause contains `throw $e;` | the file wraps a mutator in `try/catch` |
+
+The second has a trap: it asserts an **exact count** (`assertSame(1, ...)`), so
+only add files that genuinely have exactly one such catch. A file whose mutator
+returns early on every guard and has no `try` at all will fail the assertion.
+Check the full method body before adding a file — not a truncated window of it.
+
+### Structural assertions still need behavioural ones
+
+A source scan proves the **code** is shaped correctly. It passes happily on a
+call placed *after* the write, or inside a branch that never runs. Pair it with a
+behavioural test that mounts the component, revokes the permission, and asserts
+**both** the exception and the untouched row:
+
+```php
+test('createX is refused after the permission is revoked', function () {
+    ['user' => $user] = $this->createUserWithUnit(['the_permission']);
+    $this->actingAs($user);
+
+    $component = Livewire::test('x.index')->assertStatus(200);
+
+    $user->revokePermissionTo('the_permission');
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $component->set('name', 'Escalated')->call('createX')->assertForbidden();
+
+    $this->assertDatabaseMissing('xs', ['name' => 'Escalated']);
+});
+```
+
+Three details make it real:
+
+1. **Mount while the permission is still held**, then revoke — a fresh mount 403s
+   on the route gate and proves nothing about the mutator.
+2. **Seed the fixture between mount and revoke**, on the same actor and unit the
+   tab was opened with. Otherwise the assertion passes for the wrong reason (the
+   row sits somewhere the actor could never have reached).
+3. **Assert the row too.** A mutator that failed *validation* also leaves no row;
+   `assertForbidden()` plus `assertDatabaseMissing()` together prove the refusal
+   came from authorization.
+
+Always add a **positive** control — a user who still holds the permission can
+call the mutator. Fail-closed permission names (unknown name → `false`, not an
+exception) turn a typo into a green suite over a locked-out app, and only a
+positive test catches it.
+
+### Fixtures for components that load data in `mount()`
+
+A behavioural test on a component whose `mount()` queries lookup tables cannot
+mount without them. Copy the `setUp()` from an existing test of the same
+component rather than guessing, or every test in the new file fails at mount for
+a reason unrelated to the gate under test:
+
+```php
+protected function setUp(): void
+{
+    parent::setUp();
+    $this->seed(PermissionSeeder::class);
+    $this->seedLookupTables();
+}
+```
