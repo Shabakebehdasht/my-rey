@@ -166,13 +166,13 @@ session_reset:
   idle_minutes: 1440
   mode: none
 bot_peers:
-  kimya:
-    url: http://kimya:8642
-  sevda:
-    url: http://sevda:8642
-  sonia:
-    url: http://sonia:8642
-  kylie:
-    url: http://kylie:8642
   candle:
     url: http://candle:8642
+  kimya:
+    url: http://kimya:8642
+  kylie:
+    url: http://kylie:8642
+  rebecca:
+    url: http://rebecca:8642
+  sevda:
+    url: http://sevda:8642
