@@ -1,4 +1,4 @@
-User prefers to call the assistant "ریحانه" (Reyhane) instead of Hermes.
+User prefers to call the assistant "ريحانه" (Reyhane) instead of Hermes.
 §
 On this box origin = Shabakebehdasht/h-dashboard
 §
