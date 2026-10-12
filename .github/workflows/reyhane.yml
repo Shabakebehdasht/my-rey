@@ -2,8 +2,6 @@
 name: reyhane
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -277,7 +275,6 @@ jobs:
             echo "HERMES_PEER_KYLIE_KEY=${HERMES_API_KEY}"
             echo "HERMES_PEER_REBECCA_KEY=${HERMES_API_KEY}"
             echo "HERMES_PEER_SEVDA_KEY=${HERMES_API_KEY}"
-            echo "HERMES_PEER_SONIA_KEY=${HERMES_API_KEY}"
           } > ~/.hermes/.env
           chmod 600 ~/.hermes/.env
           echo '✅ Wrote ~/.hermes/.env from secrets'
