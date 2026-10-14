@@ -57,6 +57,41 @@ PHP code changes, test writing, and API resource transformers.
 
 ## Pitfalls
 
+- **Unit search dropdowns must scope to accessible units.** Any Livewire component
+  with a unit search/typeahead (`Unit::where('name', 'like', ...)`) that feeds
+  a dropdown must add `->whereIn('id', app(AccessService::class)->accessibleUnitIds())`
+  to the query. An unscoped unit picker lets any authenticated user enumerate
+  all ticket-receiving units in the organization (scope leak). The pattern is
+  an **unconditional `whereIn`** — never `when($ids, …)` or `!empty($ids)`,
+  which silently drop the predicate on an empty scope and return the whole org
+  (fail-open). Match the pattern already established in `⚡monitoring.blade.php`
+  and sweep all `resources/views/livewire/**` for unscoped unit pickers.
+
+- **CI regenerates `.env.testing` from `.env.example` and generates a fresh APP_KEY.**
+  Never commit `.env.testing` with a real `APP_KEY=base64:...` value — the
+  `AppKeyLeakGuardTest` will fail. If you generate a key locally for testing,
+  blank it (`APP_KEY=`) before committing. CI always runs:
+  `cp .env.example .env.testing && php artisan key:generate --env=testing`.
+
+- **Pint formatting changes line numbers → PHPStan baseline mismatch.** After running
+  Pint on modified files, the baseline entries in `phpstan-baseline.neon` shift
+  line numbers and become `ignore.unmatched`. Regenerate the baseline:
+  `vendor/bin/phpstan analyse --generate-baseline` and verify with `composer phpstan`.
+  Do NOT edit the baseline by hand to fix line numbers.
+
+- **Livewire test timing/debounce failures are often pre-existing, not caused by your fix.**
+  If a test uses `->set('search', '...')` without `->call('updatedSearch')` to
+  trigger the debounced handler, the component state won't update and assertions
+  on `$component->get('units')` return null. Check if the same test failed on
+  the default branch before assuming your change broke it. Stash your changes,
+  run the test on the default branch with the same seed to confirm.
+
+- **`assertSet('units', [])` asserts the *property value is an empty array*; if
+  the Livewire component initializes `$units = []` (correct) but the test's
+  `->set('search', 'x')` doesn't trigger `updatedSearch()`, the property stays
+  `[]` and the assertion passes — but the actual dropdown logic never ran.
+  Always call the updated* handler explicitly in tests: `->call('updatedSearch')`.
+
 - **`whenLoaded` returns `MissingValue`, not `null`.** When calling
   `toArray()` directly on a JsonResource (not through `toResponse()`),
   `whenLoaded('relation')` returns a `MissingValue` object. Tests must

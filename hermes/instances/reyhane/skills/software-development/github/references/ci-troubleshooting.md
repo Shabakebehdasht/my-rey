@@ -58,6 +58,76 @@ error: would reformat src/utils.py
 
 ---
 
+### PHPStan Baseline Mismatch After Pint
+
+**Signatures in logs:**
+```
+ignore.unmatched: %resources/views/livewire/tickets/⚡inbox.blade.php% (line 87)
+ignore.unmatched: %resources/views/livewire/tickets/⚡create.blade.php% (line 61)
+```
+
+**Diagnosis:**
+1. Run `vendor/bin/phpstan analyse --no-progress` to see full error list
+2. Check if the errors are `ignore.unmatched` — this means baseline entries
+   shifted line numbers due to formatting changes (Pint)
+3. Compare `git diff phpstan-baseline.neon` — entries changed only in line
+   number, not rule or file
+
+**Common fixes:**
+- **Regenerate the baseline:** `vendor/bin/phpstan analyse --generate-baseline`
+- Verify: `composer phpstan` (or `vendor/bin/phpstan analyse --no-progress`)
+- Diff entry counts: fewer is fine, any increase = real new errors
+- Do NOT edit `phpstan-baseline.neon` by hand to fix line numbers
+
+---
+
+### AppKeyLeakGuardTest Failure (Tracked Env File with APP_KEY)
+
+**Signatures in logs:**
+```
+a tracked env file in this repository still carries an APP_KEY — blank it (#953):
+  - .env.testing
+APP_KEY is the master secret: it encrypts session payloads and signs the
+cookie MAC, so anyone holding it can mint a cookie for any account.
+Failed asserting that 1 is identical to 0.
+```
+
+**Diagnosis:**
+1. CI copies `.env.example` to `.env.testing` and runs `php artisan key:generate --env=testing`
+2. If your branch commits `.env.testing` with `APP_KEY=base64:...`, the test fails
+3. Check `git diff .env.testing` — a real base64 key means it was committed
+
+**Common fixes:**
+- Blank the key: `sed -i 's/^APP_KEY=.*/APP_KEY=/' .env.testing`
+- Or restore from upstream: `git checkout upstream/beta -- .env.testing`
+- **Never commit `.env.testing` with a real APP_KEY** — CI always generates fresh
+
+---
+
+### Pre-existing Test Failures (Not Caused by Your Change)
+
+**Signatures in logs:**
+```
+FAILED Tests\Feature\TicketsCreateLivewireTest > search units
+null does not match expected type "array".
+```
+
+**Diagnosis:**
+1. Stash your changes: `git stash push --include-untracked`
+2. Run the same test on the default branch with the same seed:
+   `php artisan test --filter="test_search_units" --seed=<SEED>`
+3. If it fails on the default branch too, the failure is pre-existing
+4. Restore your changes: `git stash pop`
+
+**Common fixes:**
+- **Do not "fix" pre-existing failures in your PR** — they are not your responsibility
+- Document in the PR body: "Test X fails on beta too; pre-existing env issue"
+- Focus only on failures introduced by your changes
+- If the failure blocks CI, consider if the test should be marked risky/skipped
+  (requires maintainer decision)
+
+---
+
 ### Type Check Failures (mypy / pyright)
 
 **Signatures in logs:**
