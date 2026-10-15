@@ -1,5 +1,3 @@
-For h-dashboard PRs: user says 'pr' → create PR from current branch to upstream/beta (asgarimehdi/h-dashboard). All changes commit+push to current branch.
-§
 Every new session: default cwd is /home/runner/h-dashboard, and always use CodeGraph (`codegraph sync` first; codegraph_explore for code Q&A) + superpowers skills + read-the-damn-docs (web_search official docs) before acting; shadcn/improve for h-dashboard audits only on request.
 §
 Boost MCP occasionally dies on first stdio call ("lost its stdio subprocess") — just call it again. CLI fallback always works: php scripts/boost_tool.php <tool> '<json>'.
@@ -13,3 +11,5 @@ e2e/env rules: scripts/e2e-test.sh not concurrency-safe (never two runs; .env.de
 Map perf fixed (adc561f): bottleneck was main-thread rendering, not server (longtask /map pan 620→52ms). Fixed: circleMarker+lazy popup, icon cache, id-Map/memo depth, canvas lines, dead Livewire loadStats removed.
 §
 homeassistant is permanently deny-listed in ~/.hermes/config.yaml (plugins.disabled) — never re-enable or `hermes plugins install` it; it was never installed here.
+§
+h-dashboard PR: `gh pr create --repo asgarimehdi/h-dashboard --base beta --head Shabakebehdasht:<branch>` (gh CLI auth'd as fork owner Shabakebehdasht with repo scope). Fork remote=origin, upstream=asgarimehdi/h-dashboard. GitHub MCP fails - use gh CLI directly.

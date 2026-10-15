@@ -23,18 +23,21 @@ PHP code changes, test writing, and API resource transformers.
 ## Always-On Rules
 
 1. **Run Pint before commit.** `vendor/bin/pint --dirty` is enforced in CI.
-2. **Clear config+route cache before running tests.** Stale `routes-v7.php`
-   causes Livewire endpoint-hash mismatch — tests silently return 404 on
-   `->set()`/`->call()`.
-3. **Use `assertDatabaseHas` with all relevant fields.** Don't just assert on
+2. **Clear config+route+view cache before running tests.** Stale `routes-v7.php`
+   or compiled views cause Livewire endpoint-hash mismatch — tests silently return 404 on
+   `->set()`/`->call()`. Run `php artisan config:clear && php artisan route:clear && php artisan view:clear`.
+3. **Set `APP_KEY` in `.env.testing` before Livewire tests.** Without an app key,
+   compiled views throw `MissingAppKeyException` and every component test fails.
+   CI generates it via `php artisan key:generate --env=testing`.
+4. **Use `assertDatabaseHas` with all relevant fields.** Don't just assert on
    `title` — include `user_id`, `unit_id`, or any field the code was supposed
    to set. Partial assertions miss bugs.
-4. **Test Resource transformers directly.** Don't rely solely on controller
+5. **Test Resource transformers directly.** Don't rely solely on controller
    tests to cover API response shape — instantiate the Resource class and
    call `toArray(new Request())` to assert exact field contracts.
-5. **E2E tests go in `tests/e2e/<feature>/`** with `.spec.ts` extension.
+6. **E2E tests go in `tests/e2e/<feature>/`** with `.spec.ts` extension.
    Import from `../shared/fixtures` for `login`, `waitForLivewire`, etc.
-6. **Regenerate PHPStan baseline after fixing errors.** When you fix errors
+7. **Regenerate PHPStan baseline after fixing errors.** When you fix errors
    that exist in `phpstan-baseline.neon`, the old entries become unmatched
    and PHPStan reports new errors. Run `vendor/bin/phpstan analyse
    --generate-baseline` after every fix round, then verify with
@@ -155,6 +158,25 @@ PHP code changes, test writing, and API resource transformers.
   `assertScheduleInScope`) shared by every mutator, and also validate the
   *submitted* `unitId` is null-or-in-scope on create/update so a record cannot
   be relocated outside the actor's reach.
+- **`#[Locked]` bypass via `property_exists()` / dynamic assignment.** When a
+  Livewire handler iterates client-supplied key/value pairs and assigns with
+  `property_exists($this, $key)` or `$this->$property`, it bypasses
+  `#[Locked]` protection — `property_exists` returns `true` for locked
+  properties. **Fix: replace with an explicit allowlist constant** mapping
+  client keys to component properties, and only assign when the key is in the
+  allowlist. Locked properties must never be in the allowlist.
+- **Livewire test uses server-side property name instead of client key.**
+  Alpine.js frontend sends snake_case keys (e.g., `hardware_type`), but the
+  component property is camelCase (e.g., `filterHardware`). Tests calling
+  `->call('handler', ['filterHardware' => ...])` silently do nothing — the
+  handler's allowlist maps `hardware_type` → `filterHardware`. Always use the
+  client-side key in tests; verify the allowlist mapping in the component.
+- **GitHub PR creation: `gh` CLI works when GitHub MCP auth fails.** If
+  `mcp__github__create_pull_request` returns authentication error, use
+  `gh pr create --repo owner/repo --base target_branch --head fork_owner:branch`
+  directly in terminal. `gh` uses the local `gh auth login` token which has
+  `repo` scope; the MCP server requires a separate OAuth that may not be
+  configured. Don't retry the MCP call — fall back to `gh` immediately.
 
 ## Extracting a Reusable Nested Component
 
