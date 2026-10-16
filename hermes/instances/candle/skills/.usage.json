@@ -5,15 +5,15 @@
     "created_by": null,
     "first_seen_at": null,
     "last_patched_at": "2026-10-09T20:10:39.735400+00:00",
-    "last_reused_patch_generation": 0,
-    "last_used_at": "2026-10-09T20:10:21.423839+00:00",
-    "last_viewed_at": "2026-10-09T20:10:21.421014+00:00",
+    "last_reused_patch_generation": 1,
+    "last_used_at": "2026-10-16T10:19:00.029110+00:00",
+    "last_viewed_at": "2026-10-16T10:19:00.027661+00:00",
     "patch_count": 1,
     "patch_generation": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 2,
-    "view_count": 2
+    "use_count": 3,
+    "view_count": 3
   },
   "requesting-code-review": {
     "archived_at": null,
