@@ -169,6 +169,7 @@ jobs:
             php artisan key:generate --force
             echo '🔑 APP_KEY generated for this run'
           fi
+          php artisan optimize:clear
           php artisan optimize
           php artisan migrate:fresh --seed --force
           echo '✅ Database migrated and seeded'
