@@ -67,12 +67,15 @@ jobs:
       - name: 4. Install PHP 8.5 & Composer (Laravel + pgsql + redis)
         run: |
           sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:ondrej/php
-          # Launchpad (ppa:ondrej/php) sometimes answers 503 for minutes at a
-          # time and apt then exits 100, killing the whole run in this step
-          # (my-rey run 38951995091, 2026-10-16). Retry the PPA index fetch +
-          # PHP install up to 3 times before giving up.
+          sudo apt-get install -y lsb-release ca-certificates curl
+          # PHP now comes straight from packages.sury.org (official install
+          # per its README): the Launchpad mirror (ppa:ondrej/php) answered
+          # 503 for over an hour on 2026-10-16 and killed every run in this
+          # step, and the PPA itself announces it is merging into sury.org.
+          # The keyring package installs the repo signing key.
+          sudo curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+          sudo dpkg -i /tmp/debsuryorg-archive-keyring.deb
+          sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
           php_ok=0
           for attempt in 1 2 3; do
             if sudo apt-get update && sudo apt-get install -y \
@@ -87,7 +90,7 @@ jobs:
             sleep 20
           done
           if [ "$php_ok" != 1 ]; then
-            echo '❌ PHP install failed after 3 attempts (Launchpad/PPA unreachable)'
+            echo '❌ PHP install failed after 3 attempts (packages.sury.org unreachable)'
             exit 1
           fi
           php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
