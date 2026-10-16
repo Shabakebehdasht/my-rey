@@ -69,14 +69,14 @@
     "first_seen_at": null,
     "last_patched_at": "2026-10-09T14:09:10.039993+00:00",
     "last_reused_patch_generation": 5,
-    "last_used_at": "2026-10-09T14:09:32.255188+00:00",
-    "last_viewed_at": "2026-10-09T14:09:32.253695+00:00",
+    "last_used_at": "2026-10-16T17:35:36.433981+00:00",
+    "last_viewed_at": "2026-10-16T17:35:36.432766+00:00",
     "patch_count": 5,
     "patch_generation": 5,
     "pinned": false,
     "state": "active",
-    "use_count": 17,
-    "view_count": 17
+    "use_count": 18,
+    "view_count": 18
   },
   "github": {
     "archived_at": null,
