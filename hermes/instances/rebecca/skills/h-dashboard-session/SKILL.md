@@ -141,6 +141,82 @@ After that: **9 passed (16 assertions)**. CI installs fresh and never sees this 
 ### `php artisan schedule:list` is the real proof the scheduler is wired
 `withSchedule()` registers through `Artisan::starting()`, which only fires once the console app is constructed. So `app(Schedule::class)->events()` returns **0 in a bare/test context even when the wiring is perfect** — a test must call an artisan command first (`Artisan::call('schedule:list')`) before resolving `Schedule::class`. #864's test does this deliberately. For a manual check, `php artisan schedule:list` lists all six with next-due times and needs no test harness.
 
+## 10. Dev-server recovery (500 triage)
+
+A blanket `500` on every request before routing is almost always an empty `APP_KEY`
+in `.env` — Laravel throws `MissingAppKeyException` in `EncryptionServiceProvider`
+on the very first encrypter resolve. Check first; do not start debugging routes,
+middleware, or controllers for a uniform 500.
+
+```bash
+python3 -c "print([l for l in open('.env') if l.startswith('APP_KEY=')])"
+# or: grep -q '^APP_KEY=$' .env && echo EMPTY
+```
+
+If empty (or undecodable), regenerate — never hand-write the value:
+
+```bash
+php artisan key:generate
+php artisan about --only=environment   # confirms the key parsed and cached state is sane
+```
+
+`php artisan key:generate` writes `.env` in place. `.env` is gitignored, so there
+is nothing to commit and no staged-key trap, unlike `scripts/verify.sh`'s
+per-clone key handling in §8b.
+
+Restart the running `artisan serve` after a key change — the already-started
+process loaded the old `.env`. Kill **only** the listener for the exact host/port;
+never `pkill -f 'artisan serve'` (that sweeps the shared `:8000`):
+
+```bash
+ss -tlnp | grep ':8000 '                      # note the exact pid
+kill <pid>                                    # both the serve wrapper and its listener
+ss -tlnp | grep ':8000 '                      # must be empty before restart
+cd /home/runner/h-dashboard
+nohup php artisan serve --host=0.0.0.0 --port=8000 </dev/null >/tmp/serve.log 2>&1 &
+sleep 2
+```
+
+Healthy smoke test: the root path is a **redirect**, not a 200 — a `200` on `/`
+without following redirects is also a red flag:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}'  http://rebecca:8000/   # expect 302 -> /login
+curl -s -L -o /dev/null -w '%{http_code}' http://rebecca:8000/  # expect 200 (followed to /login)
+```
+
+If the listener refuses to die, it is an orphan from an e2e run — see the
+memory note about killing `artisan serve --port=800[1]` only, never the shared
+`:8000` process.
+
+### Livewire asset hash mismatch (login bounces / console 404)
+
+Symptom: `/login` renders (200) but submitting bounces back to `/login`; the
+browser console shows `net::ERR_ABORTED 404` for
+`livewire-<hash>/livewire.min.js?id=...`. The `<hash>` in the rendered HTML
+differs from the route prefix registered by the running app.
+
+Cause: stale bootstrap cache (`bootstrap/cache`) ships a compiled view/route
+set whose Livewire build hash no longer matches the installed package, so the
+page requests an asset path the router never declares.
+
+Fix, in order:
+1. `php artisan optimize:clear` (config, cache, compiled, events, routes, views, blade-icons).
+2. Restart `artisan serve` (the long-lived process keeps the old bootstrap in memory; a cache clear on disk is not enough).
+3. Hard-refresh the browser (Ctrl+F5) so cached HTML with the old `<hash>` is dropped.
+
+Verify the two hashes agree and the asset serves:
+```bash
+curl -s http://rebecca:8000/login | grep -o 'livewire-[a-z0-9]*/livewire.min.js?id=[a-z0-9]*' | head -1
+php artisan route:list 2>/dev/null | grep 'livewire.min.js'
+# both must share the same livewire-<hash> prefix
+curl -s -o /dev/null -w '%{http_code}' "http://rebecca:8000/<hashpath>"
+# expect 200
+```
+
+This is never a missing-file or build problem: the route exists once the cache
+is coherent. Do not rebuild assets or touch `public/`.
+
 ## 7. Pull requests
 When the user says `pr`, open a PR from the current branch to `beta` of
 `https://github.com/asgarimehdi/h-dashboard`. **Do not merge** unless asked.
