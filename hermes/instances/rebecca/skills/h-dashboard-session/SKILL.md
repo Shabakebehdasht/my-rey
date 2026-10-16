@@ -1,7 +1,7 @@
 ---
 name: h-dashboard-session
 description: "Use when working in h-dashboard repo."
-version: 1.0.0
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -17,7 +17,8 @@ Any session touching `/home/runner/h-dashboard`: new feature, bug fix, refactor,
 or a plain structural question about the code. Run sections 1-5 before real work.
 
 Repo: `/home/runner/h-dashboard` (also the configured Hermes `terminal.cwd`).
-Branch: `rebecca`. Canonical upstream: `asgarimehdi/h-dashboard`, branch `beta`.
+Branch: server-specific — determine with `git branch --show-current`; **never hardcode** the fork URL or branch name.
+Canonical upstream: `asgarimehdi/h-dashboard`, branch `beta`.
 Only remote is `origin` (this server's fork); **never add, rename, or delete remotes.**
 
 ## 1. Never
@@ -32,9 +33,33 @@ cd /home/runner/h-dashboard
 git remote -v
 git branch --show-current
 git status
-git fetch origin
-git merge origin/beta     # resolve conflicts; never rebase published work
 ```
+
+The current branch must not fall behind canonical upstream `beta`. This repo has only `origin`,
+so fetch upstream by URL (never add a remote):
+
+```bash
+git fetch https://github.com/asgarimehdi/h-dashboard beta
+# Confirm divergence direction before changing anything:
+git rev-list --count origin/beta..FETCH_HEAD      # upstream-only; expect >0 when stale
+git rev-list --count FETCH_HEAD..origin/beta      # fork-only; must be 0 before pushing beta
+git push origin FETCH_HEAD:refs/heads/beta        # fast-forward fork beta
+git fetch origin beta                              # refresh origin/beta
+```
+
+If the fork has commits `beta` lacks (second count >0), stop and reconcile manually;
+do not force-push `beta`.
+
+Then sync the current (server-specific) branch, preserving unrelated working-tree changes:
+
+```bash
+git stash push -m "pre-sync" -- <paths>    # e.g. refreshed lockfiles, in-progress edits
+git merge --ff-only origin/beta            # never rebase published work
+git stash pop
+```
+
+An upstream sync can also update `AGENTS.md` — re-read it before resuming work.
+
 Push only after step 4 verification passes.
 
 ## 3. Read project rules first
@@ -58,13 +83,26 @@ codegraph query "HardwareAuditObserver" --limit 5
 ```
 
 ## 6. Before committing
+When the task needs a non-`beta` working branch, branch directly from
+the fork's synced `beta`: there is no local `beta` branch in this
+environment, so use:
+
+```bash
+git checkout -b <slug> origin/beta
+```
+
+Run `composer test` and `php vendor/bin/pint --test` before committing.
 ```bash
 git status
 git diff
 vendor/bin/pint --test
 composer test        # pest
 ```
-Clear commit message, then `git push origin <current-branch>`.
+Clear commit message, then `git push origin HEAD:refs/heads/$(git branch --show-current)`.
+Use the explicit refspec (do not rely on the default): this repo's server branch is configured
+to track `origin/beta`, so a bare `git push` can push to the wrong ref. If the push is rejected
+non-fast-forward on the server branch, inspect `origin/<branch>` for a stale server-only commit
+(e.g. a lockfile refresh) and integrate or replace it deliberately with `--force-with-lease`.
 
 ## 6b. Unattended/api_server tool restrictions (verified 2026-10-09)
 This surface runs **unattended**, so approval-gated commands are refused rather than queued:
@@ -276,6 +314,24 @@ repeats the load-bearing rules so they survive compaction.
   `h_dashboard_test` use `DB_DATABASE=h_dashboard_test php artisan migrate`
   (confirm with `php artisan verify:preflight`). "Nothing to migrate" against
   a fresh database is the tell.
+
+## 8c. Docs-only issue work
+
+- Create the working branch with `git checkout -b <slug> origin/beta`; this
+  environment has no local `beta` branch.
+- Keep the PR strictly docs-only (AGENTS.md, README, references/…). No code,
+  lockfile bumps, scratch, or working files.
+- Re-verify any item marked audit-reported against current `beta` before
+  editing; if it no longer reproduces, state that explicitly in the PR body
+  instead of editing blindly.
+- Re-derive every updated number with the command the document prescribes and
+  record both the command and its output in the PR body.
+- On AGENTS.md: capture the U+200C count before editing (it starts at 0) and
+  confirm 0 after; check for conflict markers. Record both counts in the PR.
+- Cross-fork PRs need a fork-prefixed head: `--head Shabakebehdasht:<branch>`.
+  Formal reviewer requests often fail without push access to upstream; leave a
+  PR comment `@sonia-shab requested for review` when `gh pr create --reviewer`
+  is refused.
 
 ## 9. Docs and audit skills
 - `read-the-damn-docs` (software-development/read-the-damn-docs) — read official/current
