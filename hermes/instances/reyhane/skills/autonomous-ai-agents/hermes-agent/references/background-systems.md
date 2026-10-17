@@ -99,3 +99,27 @@ sessions still have zero `kanban_*` schema footprint unless configured.
   within a board for workspace-path + memory-key isolation.
 
 User docs: https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban
+
+### "Stop the previous job" / what is running right now
+
+"The job" is ambiguous — enumerate before acting, because one of the candidates
+kills the session you are talking through:
+
+| Kind of job | Where to look |
+|---|---|
+| Cron jobs | `cronjob_manage` action=`list` — a job with state `completed` / `enabled: false` is not running |
+| Background terminal jobs | `process_manage` action=`list` (empty = none) |
+| A session mid-turn | `session_turn_leases` in `state.db` (read-only: `sqlite3 'file:$HERMES_HOME/state.db?mode=ro'`), plus `hermes sessions list` |
+| CI workflow runs | `gh run list -R <owner>/<repo>` and `gh api "repos/O/R/actions/runs?status=in_progress"` (also `status=queued`, `status=waiting`) |
+
+- **Never cancel the in_progress workflow run of the machine you are running
+  on.** That run *is* the host of the live session; cancelling it terminates the
+  session and the VM. Check that the run name is not your own before touching
+  it, and mark it destructive when you offer it as an option.
+- A finished session (`ended_at` set, `end_reason: cli_close`) is not a running
+  job — do not offer to "stop" it.
+- `ps` is the tie-breaker for a suspected orphan (a stray `sleep` loop is
+  usually a CI step of the run that launched the session, not an agent job).
+- When more than one candidate remains, do not guess: report what you found
+  ("nothing is running here") with the candidates and ask one question that
+  carries the concrete options.

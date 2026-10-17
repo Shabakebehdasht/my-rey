@@ -1,6 +1,6 @@
 ---
 name: fix-verification
-description: "Use when checking which open issues are already fixed."
+description: "Use when verifying issue claims or which issues are fixed."
 version: 1.0.0
 author: Hermes Agent
 license: MIT
@@ -11,7 +11,7 @@ metadata:
     related_skills: [git-workflow]
 ---
 
-# Fix Verification — pre-close issue audit
+# Fix Verification — issue claims vs. current code
 
 Answer "which open issues are fixed?" with a three-bucket verdict backed by
 code and CI — never by titles or the mere existence of a merged PR. The issue
@@ -19,11 +19,20 @@ body's acceptance checklist is the rubric; grade every line against it. Do NOT
 close anything yourself unless asked — hand the user the buckets and let them
 close.
 
+The same evidence discipline answers the sibling question: **is this issue's
+finding still true on the current ref?** (audit-wave findings, `plan-in-issue`
+bodies that carry a full execution plan). The deliverable there is a verdict —
+confirmed / already fixed / duplicate / unverifiable — with file+line evidence,
+not a fix.
+
 ## When to Use
 
 - Asked which open issues are fixed / ready to close.
 - Auditing a backlog before a release or after a burst of merged PRs.
 - Confirming a single issue's fix actually shipped (same steps, one issue).
+- Reviewing a reported finding against the current tree and reporting an expert
+  verdict — `references/shared-queue-issue-review.md` when a whole issue list is
+  in play and other agents are working it too.
 - NOT for reviewing open PR code (use the `github` skill's code-review flow),
   and never for closing issues off keyword matches alone.
 
@@ -78,6 +87,36 @@ close.
    Also report in-flight work (`gh pr list --state open`): an open PR means
    "not fixed" may just be "not merged yet".
 
+8. **Verify by executing when the claim is about behaviour, not text.** A query
+   plan, an ordering rule, a route's middleware list — run it. Reading code says
+   what the line *looks* like; only execution settles whether the index is
+   picked, the job is reserved twice, or the guard actually fires. SQL/index
+   claims: `references/perf-claim-verification.md`. Keep every live probe
+   read-only or wrapped so it cannot persist.
+
+## Shared queues (several agents on one issue list)
+
+On an audit wave the work protocol is part of correctness, not etiquette:
+
+- **Claim by commenting, nothing else.** Only issues with **zero** comments are
+  free; a comment means another agent has it or has finished it. Re-read the
+  count right before the deep dive *and* immediately before posting — it moves
+  under you. If it moved, skip to the next issue and drop your draft.
+- **Never post a second analysis on the same issue**, even when yours is deeper.
+- **Order:** priority label first (P1 → P2 → P3), lowest issue number inside a
+  priority. One issue at a time — do not open the next before the current one's
+  comment is posted.
+- **Only comment.** Do not touch title/body/labels/milestone, do not close, do
+  not push code or open a PR unless the requester asked.
+- Progress lives in the comments, so no separate status report is needed: a
+  session that dies mid-list is resumed by the next one under the same
+  zero-comment rule.
+- Expect to lose races — batch the verification reads into as few calls as
+  possible and write the comment as soon as the evidence is in.
+
+The comment skeleton, verdict vocabulary, and evidence rules:
+`references/shared-queue-issue-review.md`.
+
 ## Pitfalls
 
 - Fixes often carry no `#N` in commit messages. Keyword-search PR titles AND
@@ -91,6 +130,20 @@ close.
   report it done.
 - Batch shell work in medium calls: one oversized execution that times out
   destroys every command's output in it, not just the slow one.
+- **The body's own "Current state" excerpts are not evidence.** Plan-in-issue
+  bodies are written from memory and drift: a quoted `config` block can show a
+  setting the file no longer has, and quoted line numbers can be off by one.
+  Re-read every cited file+line; on a disagreement the **code wins** and the
+  disagreement is itself a finding worth reporting.
+- **A plan can be dead on arrival.** Check its own STOP conditions first — a
+  column that is already nullable, a `retry_after` that moved, a middleware the
+  plan assumes is registered but never was. When one is already true, report
+  that with evidence instead of recommending the execution.
+- **A dead index arm is invisible to a one-line grep.** When a fix claims "this
+  query will use index X", verify the whole predicate, not the changed line.
+- Names of tests you must update are part of the evidence: grep the test tree
+  for the symbol the change touches and cite file + test name, never "tests may
+  break".
 
 ## Verification
 
