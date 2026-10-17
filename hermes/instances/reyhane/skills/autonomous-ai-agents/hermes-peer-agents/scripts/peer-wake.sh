@@ -17,7 +17,7 @@ set -uo pipefail
 
 owner="${GH_OWNER:-Shabakebehdasht}"
 repo="${PEER_REPO:-my-rey}"
-all=(kimya sevda sonia kylie rebecca)
+all=(kimya sevda candle kylie rebecca)
 peers=("$@")
 [ ${#peers[@]} -eq 0 ] && peers=("${all[@]}")
 

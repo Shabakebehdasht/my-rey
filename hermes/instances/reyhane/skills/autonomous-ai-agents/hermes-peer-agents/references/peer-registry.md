@@ -53,7 +53,8 @@ that the `concurrency:` block is still present and re-add it if not.
 |---|---|---|
 | kimya | `Shabakebehdasht/my-rey` | `kimya.yml` |
 | sevda | `Shabakebehdasht/my-rey` | `sevda.yml` |
-| sonia | `Shabakebehdasht/my-rey` | `sonia.yml` |
+| sonia → NOT A PEER | — no `sonia.yml` exists in `my-rey`; `sonia` is also absent from `hermes peer list`. Never dispatch it. |
+| candle | `Shabakebehdasht/my-rey` | `candle.yml` |
 | kylie | `Shabakebehdasht/my-rey` | `kylie.yml` |
 | rebecca | `Shabakebehdasht/my-rey` | `rebecca.yml` |
 

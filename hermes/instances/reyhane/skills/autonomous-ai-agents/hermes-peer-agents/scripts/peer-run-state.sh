@@ -2,7 +2,7 @@
 # Report active workflow runs for every peer workflow and flag conflicts.
 #
 # ALL peer workflows live in ONE repo: Shabakebehdasht/my-rey (kimya.yml,
-# sevda.yml, sonia.yml, kylie.yml). The old per-peer repos (my-kim, my-sev,
+# sevda.yml, candle.yml, kylie.yml). The old per-peer repos (my-kim, my-sev,
 # my-son, my-kyl) return 404 — do not reintroduce them.
 #
 # A peer machine must have AT MOST ONE in_progress run of ITS OWN workflow: the
@@ -20,7 +20,7 @@ set -uo pipefail
 owner="${GH_OWNER:-Shabakebehdasht}"
 repo="${PEER_REPO:-my-rey}"
 # peer workflow names — keep in sync with references/peer-registry.md
-peers=(kimya sevda sonia kylie rebecca)
+peers=(kimya sevda candle kylie rebecca)
 
 conflicts=0
 runs=$(gh run list -R "$owner/$repo" -L 20 \
