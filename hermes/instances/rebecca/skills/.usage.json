@@ -100,14 +100,14 @@
     "created_by": null,
     "last_patched_at": null,
     "last_reused_patch_generation": 0,
-    "last_used_at": "2026-10-14T16:29:46.870870+00:00",
-    "last_viewed_at": "2026-10-14T16:29:46.869683+00:00",
+    "last_used_at": "2026-10-19T17:54:29.440192+00:00",
+    "last_viewed_at": "2026-10-19T17:54:29.439110+00:00",
     "patch_count": 0,
     "patch_generation": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 31,
-    "view_count": 31
+    "use_count": 33,
+    "view_count": 33
   },
   "github-discussions": {
     "archived_at": null,
@@ -132,14 +132,14 @@
     "first_seen_at": null,
     "last_patched_at": "2026-10-16T18:26:20.142394+00:00",
     "last_reused_patch_generation": 13,
-    "last_used_at": "2026-10-16T18:44:34.389714+00:00",
-    "last_viewed_at": "2026-10-16T18:44:34.388477+00:00",
+    "last_used_at": "2026-10-19T17:57:46.360115+00:00",
+    "last_viewed_at": "2026-10-19T17:57:46.358410+00:00",
     "patch_count": 13,
     "patch_generation": 13,
     "pinned": false,
     "state": "active",
-    "use_count": 35,
-    "view_count": 35
+    "use_count": 37,
+    "view_count": 37
   },
   "hermes-agent": {
     "archived_at": null,
@@ -208,15 +208,15 @@
     "created_by": "agent",
     "first_seen_at": null,
     "last_patched_at": "2026-09-28T18:14:53.681299+00:00",
-    "last_reused_patch_generation": 0,
-    "last_used_at": "2026-09-28T18:14:06.341267+00:00",
-    "last_viewed_at": "2026-09-28T18:14:06.339796+00:00",
+    "last_reused_patch_generation": 1,
+    "last_used_at": "2026-10-19T17:57:46.362843+00:00",
+    "last_viewed_at": "2026-10-19T17:57:46.361812+00:00",
     "patch_count": 1,
     "patch_generation": 1,
     "pinned": false,
     "state": "stale",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "laravel-patterns": {
     "archived_at": null,

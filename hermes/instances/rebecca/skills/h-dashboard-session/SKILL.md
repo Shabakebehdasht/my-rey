@@ -409,6 +409,26 @@ repeats the load-bearing rules so they survive compaction.
   PR comment `@sonia-shab requested for review` when `gh pr create --reviewer`
   is refused.
 
+## 8d. Registering audit plans as GitHub issues
+
+When the user hands over a plan document (`003-…`, `005-…`, `008-…`) and says
+"register as issue, no labels", create it on `asgarimehdi/h-dashboard`:
+
+```bash
+gh issue create --repo asgarimehdi/h-dashboard \
+  --title "<plan H1, verbatim>" \
+  --body-file /tmp/<plan>.md
+```
+
+- Title = the plan's `# …` heading, unchanged.
+- Body = the full plan markdown (write it to a scratch file first; never inline —
+  backticks and newlines mangle).
+- No `--label`, no `--milestone`, no assignee — match the most recent audit issue:
+  check `gh issue list --limit 3` first; the latest audit issue is label-less and
+  milestone-less. The user's "no labels" overrides the issue-tracker convention.
+- Sweep for duplicates first: `gh issue list --search "<title keywords>"`.
+- Creating the issue is the whole task; do not push or open a PR unless asked.
+
 ## 9. Docs and audit skills
 - `read-the-damn-docs` (software-development/read-the-damn-docs) — read official/current
   docs before implementing against any third-party API or library. Context7 MCP for
