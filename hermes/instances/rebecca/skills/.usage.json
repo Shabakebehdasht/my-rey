@@ -11,7 +11,7 @@
     "patch_count": 6,
     "patch_generation": 6,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 4,
     "view_count": 4
   },
@@ -43,7 +43,7 @@
     "patch_count": 0,
     "patch_generation": 0,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 2,
     "view_count": 2
   },
@@ -90,7 +90,7 @@
     "patch_count": 10,
     "patch_generation": 10,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 17,
     "view_count": 17
   },
@@ -183,7 +183,7 @@
     "patch_count": 7,
     "patch_generation": 7,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 3,
     "view_count": 3
   },
@@ -214,7 +214,7 @@
     "patch_count": 1,
     "patch_generation": 1,
     "pinned": false,
-    "state": "stale",
+    "state": "active",
     "use_count": 2,
     "view_count": 2
   },
@@ -230,7 +230,7 @@
     "patch_count": 11,
     "patch_generation": 11,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 11,
     "view_count": 11
   },
