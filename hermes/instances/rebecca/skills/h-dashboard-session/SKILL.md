@@ -217,6 +217,31 @@ curl -s -o /dev/null -w '%{http_code}' "http://rebecca:8000/<hashpath>"
 This is never a missing-file or build problem: the route exists once the cache
 is coherent. Do not rebuild assets or touch `public/`.
 
+## 6e. Bulk import write pitfalls (HardwareImport / PersonImport)
+
+Confirmed imports are queued (ImportHardwareJob / ImportPersonsJob). When editing
+that path, keep these invariants:
+
+- **Dedup `pendingUpdates` by id before chunking.** `pc_name`/`mac`/`n_code` are
+  not unique, so two sheet rows can resolve to the same existing row id; a single
+  `upsert(..., ['id'])` with the same conflict target twice makes PostgreSQL
+  reject the whole statement (`ON CONFLICT DO UPDATE command cannot affect row a
+  second time`). Collapse with `$deduped[$item['id']] = $item;` (last write wins)
+  before `array_chunk`.
+- **Audit escaping must happen on the bulk path too.** `HardwareBulkAuditWriter`
+  is the only bulk audit entry point; `ExcelCell::escape()` must be applied to
+  every `old`/`new` value before `json_encode`, mirroring
+  `HardwareAuditObserver::sanitizeChanges`. Otherwise a formula-leading value is
+  stored raw while the observer path stores it escaped.
+- **Queue connection must outlive `$timeout`.** A job with `$timeout = 600` on the
+  default redis connection (retry_after 90s) is re-reservable mid-run. Pair it
+  with a connection whose retry_after ≥ timeout (e.g. redis-reports, 660s) via
+  `#[Connection('redis-reports')]`.
+- **`failed()` must drop the stored upload.** The file is kept only on the
+  success path; on failure delete it to avoid orphans (tries = 1, no replay).
+- **`dispatch('…-imported')` fires synchronously even under QUEUE_CONNECTION=sync.**
+  Keep it after `resetForm()`; tests assert it. Do not move it before the job.
+
 ## 7. Pull requests
 When the user says `pr`, open a PR from the current branch to `beta` of
 `https://github.com/asgarimehdi/h-dashboard`. **Do not merge** unless asked.
