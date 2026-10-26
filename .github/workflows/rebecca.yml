@@ -3,7 +3,7 @@ name: rebecca
 
 on:
   schedule:
-    - cron: '0 5,11,17,23 * * *'
+    - cron: '0 5,17 * * *'
   workflow_dispatch:
 
 concurrency:
