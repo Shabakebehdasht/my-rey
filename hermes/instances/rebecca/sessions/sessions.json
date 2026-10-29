@@ -85,11 +85,53 @@
       "chat_topic": null
     }
   },
+  "agent:main:local:dm:local-21ebe416908849aaa254a2e57216b394c112c7a82cc2b3b3203aede82870fdb7": {
+    "session_key": "agent:main:local:dm:local-21ebe416908849aaa254a2e57216b394c112c7a82cc2b3b3203aede82870fdb7",
+    "session_id": "local-21ebe416908849aaa254a2e57216b394c112c7a82cc2b3b3203aede82870fdb7",
+    "created_at": "2026-10-29T19:26:15.935532",
+    "updated_at": "2026-10-29T19:26:16.901783",
+    "display_name": null,
+    "platform": "local",
+    "chat_type": "dm",
+    "metadata": {},
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "total_tokens": 0,
+    "last_prompt_tokens": 0,
+    "estimated_cost_usd": 0.0,
+    "cost_status": "unknown",
+    "expiry_finalized": false,
+    "suspended": false,
+    "resume_pending": false,
+    "resume_reason": null,
+    "yolo": false,
+    "yolo_toggle": null,
+    "last_resume_marked_at": null,
+    "active_turn_token": "f0e2a8387bdb41e2aab9e6d5eba276db",
+    "active_turn_started_at": "2026-10-29T19:26:16.901733+00:00",
+    "is_fresh_reset": false,
+    "was_auto_reset": false,
+    "auto_reset_reason": null,
+    "reset_had_activity": false,
+    "prev_session_id": null,
+    "origin": {
+      "platform": "local",
+      "chat_id": "local-21ebe416908849aaa254a2e57216b394c112c7a82cc2b3b3203aede82870fdb7",
+      "chat_name": null,
+      "chat_type": "dm",
+      "user_id": "uid:1001",
+      "user_name": null,
+      "thread_id": null,
+      "chat_topic": null
+    }
+  },
   "agent:main:telegram:group:-1004376120571:100651143": {
     "session_key": "agent:main:telegram:group:-1004376120571:100651143",
-    "session_id": "20261029_175631_d7c7a6a2",
-    "created_at": "2026-10-29T17:56:31.515646",
-    "updated_at": "2026-10-29T17:56:31.515646",
+    "session_id": "20261029_192659_2deaaca0",
+    "created_at": "2026-10-29T19:26:59.307926",
+    "updated_at": "2026-10-29T19:26:59.307926",
     "display_name": "گروه تیم",
     "platform": "telegram",
     "chat_type": "group",
@@ -125,7 +167,7 @@
       "user_name": "M A",
       "thread_id": null,
       "chat_topic": null,
-      "message_id": "3003"
+      "message_id": "3032"
     }
   }
 }
