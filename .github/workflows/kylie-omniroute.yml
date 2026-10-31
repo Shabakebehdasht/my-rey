@@ -1,0 +1,686 @@
+# Managed by RemoteHermes — template v2 (regenerated on Update; manual edits are overwritten)
+name: kylie-omniroute
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    env:
+      REPO_ORIGIN: https://github.com/Shabakebehdasht/h-dashboard.git
+      WF_NAME: kylie
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: 2. Setup OpenSSH Server & Set Runner Password
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-server
+          echo "runner:${{ secrets.RUNNER_PASSWORD }}" | sudo chpasswd
+          sudo sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo systemctl restart ssh
+          sudo systemctl enable ssh
+
+      - name: 3. Setup npm, PATH, and Environment Variables Persistently
+        env:
+          GH_TOKEN: ${{ secrets.MY_PAT }}
+        run: |
+          mkdir -p ~/.npm-global
+          npm config set prefix '~/.npm-global'
+
+          echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
+          echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.profile
+          export PATH="$HOME/.npm-global/bin:$PATH"
+
+          echo "export GH_TOKEN=$GH_TOKEN" >> ~/.bashrc
+          echo "export GH_TOKEN=$GH_TOKEN" >> ~/.profile
+          echo "GH_TOKEN=$GH_TOKEN" | sudo tee -a /etc/environment
+
+          echo 'export INITIAL_PASSWORD="${{ secrets.RUNNER_PASSWORD }}"' >> ~/.bashrc
+          echo 'export INITIAL_PASSWORD="${{ secrets.RUNNER_PASSWORD }}"' >> ~/.profile
+          echo 'INITIAL_PASSWORD="${{ secrets.RUNNER_PASSWORD }}"' | sudo tee -a /etc/environment
+
+          # CodeGraph CLI — installed here, the first step where npm is on PATH.
+          # ~/.hermes/config.yaml (restored later) runs
+          # ~/.npm-global/bin/codegraph serve --mcp, so this must land before
+          # the gateway boots. The /usr/local/bin symlink keeps the plain
+          # `codegraph` command available in every shell.
+          npm install -g @colbymchenry/codegraph
+          if [ -x ~/.npm-global/bin/codegraph ]; then
+            sudo ln -sf ~/.npm-global/bin/codegraph /usr/local/bin/codegraph
+            echo "✅ CodeGraph installed: $(/usr/local/bin/codegraph --version)"
+          else
+            echo '⚠️ CodeGraph binary not found after installation'
+          fi
+
+      - name: 4. Install PHP 8.5 & Composer (Laravel + pgsql + redis)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lsb-release ca-certificates curl
+          # PHP now comes straight from packages.sury.org (official install
+          # per its README): the Launchpad mirror (ppa:ondrej/php) answered
+          # 503 for over an hour on 2026-10-16 and killed every run in this
+          # step, and the PPA itself announces it is merging into sury.org.
+          # The keyring package installs the repo signing key.
+          sudo curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+          sudo dpkg -i /tmp/debsuryorg-archive-keyring.deb
+          sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
+          php_ok=0
+          for attempt in 1 2 3; do
+            if sudo apt-get update && sudo apt-get install -y \
+              php8.5 php8.5-cli php8.5-common php8.5-fpm \
+              php8.5-mbstring php8.5-xml php8.5-pgsql php8.5-curl php8.5-zip php8.5-bcmath php8.5-intl php8.5-gd \
+              php8.5-redis php8.5-tokenizer php8.5-fileinfo php8.5-ctype \
+              unzip; then
+              php_ok=1
+              break
+            fi
+            echo "⚠️ PHP install attempt $attempt failed — retrying in 20s"
+            sleep 20
+          done
+          if [ "$php_ok" != 1 ]; then
+            echo '❌ PHP install failed after 3 attempts (packages.sury.org unreachable)'
+            exit 1
+          fi
+          php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+          sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+          php -r "unlink('composer-setup.php');"
+
+      - name: 5. Connect Tailscale as Exit Node & Show Access Info
+        env:
+          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname="${{ env.WF_NAME }}" --advertise-exit-node --accept-routes --accept-dns
+
+          # Enable IP forwarding (required for exit node to route traffic)
+          echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.conf
+          echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.conf
+          sudo sysctl -p /etc/sysctl.conf
+
+          TS_IP=$(sudo tailscale ip -4)
+          echo "=================================================="
+          echo "  >>> SSH & WEB SERVER ARE LIVE! <<<"
+          echo "  Tailscale IP  : $TS_IP"
+          echo "  Username      : runner"
+          echo "  Password      : ${{ secrets.RUNNER_PASSWORD }}"
+          echo "  ------------------------------------------------"
+          echo "  💻 SSH: ssh runner@$TS_IP"
+          echo "  🌐 Web : http://$TS_IP:8000  (Laravel)"
+          echo "  🔀 OmniRoute: http://$TS_IP:20128  (dashboard) [TRIAL]"
+          echo "  💾 Project: /home/runner/h-dashboard"
+          echo "  🌍 Exit Node: Enabled (advertise-exit-node)"
+          echo "=================================================="
+
+      - name: 6. Authenticate gh CLI & configure git credential helper
+        env:
+          GH_TOKEN: ${{ secrets.MY_PAT }}
+        run: |
+          unset GH_TOKEN
+          echo "${{ secrets.MY_PAT }}" | gh auth login --with-token
+          gh auth setup-git
+          gh auth status
+          echo "✅ GitHub CLI authenticated as: $(gh api user -q .login)"
+
+      - name: 7. Clone / sync h-dashboard and create branch
+        env:
+          GH_TOKEN: ${{ secrets.MY_PAT }}
+        run: |
+          cd /home/runner
+          if [ ! -d h-dashboard ]; then
+            git clone "$REPO_ORIGIN"
+          fi
+          cd h-dashboard
+
+          # Set git identity for commits
+          git config user.name "Shabakebehdasht"
+          git config user.email "Shabakebehdasht@users.noreply.github.com"
+
+          # Fetch latest origin/beta
+          git fetch origin beta
+
+          # Sync this fork's beta from upstream beta BEFORE branching off it:
+          # REPO_ORIGIN is this account's own h-dashboard fork, whose beta
+          # usually lags asgarimehdi/h-dashboard, so branching from
+          # origin/beta booted machines on stale code. Mirror upstream/beta
+          # into the fork (plain push via the step-6 gh credential helper),
+          # then branch from the fresh origin/beta below, exactly as before.
+          UPSTREAM_URL="https://github.com/asgarimehdi/h-dashboard.git"
+          if [ "$REPO_ORIGIN" = "$UPSTREAM_URL" ]; then
+            echo "ℹ️ REPO_ORIGIN is upstream itself — fork-beta sync skipped"
+          else
+            git remote get-url upstream >/dev/null 2>&1 \
+              || git remote add upstream "$UPSTREAM_URL"
+            git fetch upstream beta
+            git checkout -B beta upstream/beta
+            if git push origin beta; then
+              echo "✅ Fork beta synced from upstream beta"
+            else
+              # The push failed (e.g. this token cannot write to the fork).
+              # Do NOT boot from the stale fork beta and do NOT abort the
+              # run either: repoint this clone's origin/beta view at the
+              # freshly fetched upstream/beta, so the checkout below still
+              # branches from current code for this run. The fork itself
+              # stays stale; the next run retries the sync. (This clone is
+              # ephemeral — nothing else reads its origin/beta ref.)
+              echo "⚠️⚠️⚠️ WARNING: pushing the synced beta to the fork FAILED — booting this run from the freshly fetched upstream/beta, NOT the stale fork beta"
+              git update-ref refs/remotes/origin/beta upstream/beta
+            fi
+          fi
+
+          # Create / reset WF_NAME branch from origin/beta
+          git checkout -B "${WF_NAME}" origin/beta
+          echo "✅ Branch ${WF_NAME} created/reset from origin/beta"
+
+          cp .env.example.pgsql .env
+
+          # .hermes.md is not wanted — AGENTS.md is the authoritative instruction
+          # file. Drop it from the checkout and from the index (without touching
+          # beta), then exclude it so `git status` stays clean.
+          if git ls-files --error-unmatch .hermes.md >/dev/null 2>&1; then
+            git rm -q --cached .hermes.md
+          fi
+          rm -f .hermes.md
+          grep -qxF '.hermes.md' .git/info/exclude 2>/dev/null \
+            || echo '.hermes.md' >> .git/info/exclude
+          echo '✅ .hermes.md removed from the checkout and the index'
+
+      - name: 8. Start Docker Compose (PostgreSQL)
+        run: |
+          cd /home/runner/h-dashboard
+          docker compose -f docker-compose-pgsql-.yml up -d
+          echo '✅ Docker Compose started'
+
+      - name: 9. Composer, NPM, Optimize, Migrate & Seed
+        run: |
+          cd /home/runner/h-dashboard
+          composer update --no-interaction
+          npm update
+          # APP_KEY: step 7 re-copies the tracked .env template over .env on every
+          # run, and that template ships APP_KEY blank since #953 — without a key
+          # the served app throws a 500 on every web request. Generate one for
+          # this run when .env has none (artisan setup passes without it, which
+          # is why setup looked healthy while the pages failed).
+          if ! grep -q '^APP_KEY=base64:' .env; then
+            php artisan key:generate --force
+            echo '🔑 APP_KEY generated for this run'
+          fi
+          php artisan optimize:clear
+          php artisan optimize
+          php artisan migrate:fresh --seed --force
+          echo '✅ Database migrated and seeded'
+
+      - name: 10. Build frontend assets
+        run: |
+          cd /home/runner/h-dashboard
+          if ! npm run build; then
+            # npm's optional-dependencies bug (npm/cli#4828): after the
+            # `npm update` in step 9, the platform binding
+            # @rolldown/binding-linux-x64-gnu can be missing from
+            # node_modules and vite dies with "Cannot find native
+            # binding" (seen on my-opencode run 37746307765 — the
+            # identical build had passed 20 minutes earlier; the bug
+            # strikes nondeterministically). npm's own prescribed
+            # remedy is a clean reinstall without the stale lockfile;
+            # do exactly that, once, and rebuild.
+            echo '⚠️ Build failed — clean npm reinstall (stale-lock optional-deps bug), then rebuild'
+            rm -rf node_modules package-lock.json
+            npm install
+            npm run build
+          fi
+          echo '✅ Frontend assets built'
+
+      - name: 10b. Index h-dashboard with CodeGraph
+        run: |
+          cd /home/runner/h-dashboard
+          if [ -x /usr/local/bin/codegraph ]; then
+            CODEGRAPH_TELEMETRY=0 codegraph init .
+            CODEGRAPH_TELEMETRY=0 codegraph status .
+            echo '✅ CodeGraph index built for h-dashboard'
+          else
+            echo '⚠️ CodeGraph not on PATH — skipping index'
+          fi
+
+      - name: 11. Install OmniRoute 3.8.53 + write first-boot secrets (TRIAL — replaces 9router)
+        env:
+          RUNNER_PASSWORD: ${{ secrets.RUNNER_PASSWORD }}
+        run: |
+          # OmniRoute (cheaper-inference/OmniRoute, pinned 3.8.53) replaces 9router
+          # in this trial. No wreq-js install: OmniRoute bundles its own wreq-js
+          # TLS-fingerprint runtime. No Bun: OmniRoute runs on Node.
+          # Node engines: >=22.22.2 <23 || >=24 <27. The runner's default node
+          # is used when it satisfies that; otherwise fall back to a suitable
+          # version from the runner tool cache. Never silently run on the
+          # wrong Node: fail loudly if neither is available.
+          node_ok() {
+            node -e "const v=process.version.slice(1).split('.').map(Number);const ok=(v[0]===22&&((v[1]>22)||(v[1]===22&&v[2]>=2)))||(v[0]>=24&&v[0]<27);process.exit(ok?0:1);" 2>/dev/null
+          }
+          if ! node_ok; then
+            echo "⚠️ Default node $(node --version 2>/dev/null || echo none) does not satisfy OmniRoute engines — looking in the tool cache…"
+            for d in /opt/hostedtoolcache/node/24.*/x64 /opt/hostedtoolcache/node/22.2[2-9]*/x64 /opt/hostedtoolcache/node/22.[3-9]*/x64; do
+              if [ -x "$d/bin/node" ] && PATH="$d/bin:$PATH" node_ok; then
+                export PATH="$d/bin:$PATH"
+                echo "export PATH=\"$d/bin:\$PATH\"" >> ~/.bashrc
+                echo "export PATH=\"$d/bin:\$PATH\"" >> ~/.profile
+                echo "✅ Using Node from tool cache: $d ($(node --version))"
+                break
+              fi
+            done
+          fi
+          node_ok || { echo '❌ No suitable Node (>=22.22.2 <23, or >=24 <27) on this runner — cannot start OmniRoute'; exit 1; }
+          echo "✅ Node $(node --version) satisfies OmniRoute engines"
+          # npm 11 needs --allow-scripts for lifecycle/postinstall scripts.
+          NPM_MAJOR=$(npm --version | cut -d. -f1)
+          if [ "$NPM_MAJOR" -ge 11 ] 2>/dev/null; then ALLOW_SCRIPTS="--allow-scripts"; else ALLOW_SCRIPTS=""; fi
+          # Pin the exact release: OmniRoute config formats drift between minors.
+          npm install -g "omniroute@3.8.53" $ALLOW_SCRIPTS || npm install -g "omniroute@3.8.53"
+          if ! command -v omniroute >/dev/null 2>&1; then
+            echo '❌ omniroute binary not found after installation'; exit 1
+          fi
+          omniroute --version >/dev/null 2>&1 || omniroute --help 2>/dev/null | grep -q 'serve' || { echo '❌ omniroute CLI did not respond to --version/--help'; exit 1; }
+          echo "✅ OmniRoute installed: $(omniroute --version 2>/dev/null || echo 3.8.53)"
+          # First-boot secrets. The npm install copies .env.example to .env in
+          # the package dir; its CHANGEME values are publicly known, so rewrite
+          # the three required secrets with fresh values. Dashboard password =
+          # RUNNER_PASSWORD (the existing runner secret, already used by step 2).
+          # The same values are also saved to /tmp/omniroute-secrets.env for
+          # step 12 to export at serve time (single source of truth).
+          PKG_DIR="$(npm root -g)/omniroute"
+          JWT_SECRET="$(openssl rand -base64 48)"
+          API_KEY_SECRET="$(openssl rand -hex 32)"
+          JWT_SECRET="$JWT_SECRET" API_KEY_SECRET="$API_KEY_SECRET" INITIAL_PASSWORD="$RUNNER_PASSWORD" PKG_DIR="$PKG_DIR" python3 - <<'PYEOF'
+          import os, shlex
+          secrets = {
+              "JWT_SECRET": os.environ["JWT_SECRET"],
+              "API_KEY_SECRET": os.environ["API_KEY_SECRET"],
+              "INITIAL_PASSWORD": os.environ["INITIAL_PASSWORD"],
+          }
+          quoted = {k: shlex.quote(v) for k, v in secrets.items()}
+          # Secrets file for step 12 (shell-quoted, mode 600).
+          with open("/tmp/omniroute-secrets.env", "w") as f:
+              for k, v in quoted.items():
+                  f.write(f"{k}={v}\n")
+          os.chmod("/tmp/omniroute-secrets.env", 0o600)
+          # Package .env: rewrite the three key lines, keep everything else.
+          env_path = os.path.join(os.environ["PKG_DIR"], ".env")
+          lines = []
+          if os.path.exists(env_path):
+              lines = open(env_path).read().splitlines()
+          seen = set()
+          out = []
+          for line in lines:
+              key = line.split("=", 1)[0].strip() if "=" in line else ""
+              if key in secrets:
+                  out.append(f"{key}={quoted[key]}")
+                  seen.add(key)
+              else:
+                  out.append(line)
+          for k, v in quoted.items():
+              if k not in seen:
+                  out.append(f"{k}={v}")
+          with open(env_path, "w") as f:
+              f.write("\n".join(out) + "\n")
+          PYEOF
+          if grep -Eq '^(JWT_SECRET|API_KEY_SECRET|INITIAL_PASSWORD)=CHANGEME' "$PKG_DIR/.env"; then
+            echo '❌ CHANGEME secret left in OmniRoute .env'; exit 1
+          fi
+          mkdir -p ~/.omniroute
+          echo '✅ OmniRoute 3.8.53 installed; first-boot secrets written'
+
+      - name: 12. Start OmniRoute on :20128 + connect opencode-zen (TRIAL — replaces 9router db restore)
+        run: |
+          # Boot OmniRoute (full server: dashboard ON — headless mode would
+          # switch the dashboard off). Port stays 20128 so Hermes needs no
+          # endpoint change. REQUIRE_API_KEY=false: with it off, an unknown
+          # Bearer (Hermes sends HERMES_CUSTOM_API_KEY) degrades to anonymous
+          # instead of 401 (OmniRoute #2257) — no API-key creation dance.
+          # ENABLE_TLS_FINGERPRINT=true: wreq-js TLS-fingerprint transport
+          # (off by default). OPENCODE_V2_CLIENT_FINGERPRINT_ENABLED=true:
+          # v2 CLI identity (off by default). Both are the two pieces the
+          # Oct 2026 Zen-gate diagnosis says the free lane needs.
+          set -a; . /tmp/omniroute-secrets.env; set +a
+          export HOST=0.0.0.0 PORT=20128 NEXT_PUBLIC_PORT=20128
+          export DATA_DIR="$HOME/.omniroute" REQUIRE_API_KEY=false
+          export ENABLE_TLS_FINGERPRINT=true
+          export OPENCODE_V2_CLIENT_FINGERPRINT_ENABLED=true
+          export OPENCODE_SYNTHESIZE_CLI_HEADERS=true
+          export OMNIROUTE_MEMORY_MB=8192
+          nohup omniroute serve --port 20128 --no-open > /tmp/omniroute.log 2>&1 &
+          echo "OmniRoute PID $!"
+          # Wait for the server: first boot runs DB migrations + Next.js
+          # startup and can take minutes. Fail loudly if it never answers.
+          HEALTH_OK=0
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:20128/api/monitoring/health > /dev/null 2>&1; then HEALTH_OK=1; break; fi
+            sleep 10
+          done
+          if [ "$HEALTH_OK" != 1 ]; then
+            echo '❌ OmniRoute did not answer /api/monitoring/health — see /tmp/omniroute.log'
+            tail -n 80 /tmp/omniroute.log || true
+            exit 1
+          fi
+          echo '✅ OmniRoute server is up on :20128'
+          # Best-effort: connect the opencode-zen provider via the management
+          # API (login with the dashboard password, then POST /api/providers
+          # with apiKey "public" — the executor overrides the stored key with
+          # the anonymous free-lane credential for gated models, so the stored
+          # value is only a placeholder). This path is UNVERIFIED live: any
+          # failure here is a WARNING, not a step failure — the dashboard
+          # fallback is: Providers → opencode-zen → Connect (no key needed),
+          # then retry in Telegram. NEVER click Test in the dashboard: a
+          # non-CLI-shaped probe can get the egress IP flagged (9router #5149).
+          CONNECT_OK=0
+          JAR=/tmp/omniroute-cookies.txt
+          LOGIN_HTTP=$(curl -s -o /tmp/omniroute-login.json -w '%{http_code}' -c "$JAR" -H 'Content-Type: application/json' -d "{\"password\": \"$INITIAL_PASSWORD\"}" http://127.0.0.1:20128/api/auth/login || echo 000)
+          if [ "$LOGIN_HTTP" = "200" ]; then
+            PROV_HTTP=$(curl -s -o /tmp/omniroute-provider.json -w '%{http_code}' -b "$JAR" -H 'Content-Type: application/json' -d '{"provider": "opencode-zen", "apiKey": "public"}' http://127.0.0.1:20128/api/providers || echo 000)
+            echo "Provider connect HTTP: $PROV_HTTP — $(head -c 300 /tmp/omniroute-provider.json 2>/dev/null)"
+            if [ "$PROV_HTTP" = "200" ] || [ "$PROV_HTTP" = "201" ]; then CONNECT_OK=1; fi
+          else
+            echo "⚠️ OmniRoute dashboard login HTTP: $LOGIN_HTTP — connect step skipped (see /tmp/omniroute-login.json)"
+          fi
+          if [ "$CONNECT_OK" = 1 ]; then echo '✅ opencode-zen provider connected via management API'; else echo '⚠️ opencode-zen NOT connected via API — use the dashboard fallback (Providers → opencode-zen → Connect), then retry in Telegram'; fi
+          # Soft check: is the pinned model advertised? Absence is a warning
+          # (provider may be unconnected), not a failure — the seed in step 13
+          # is the real test.
+          MODELS_OK=0
+          for attempt in 1 2 3; do
+            if curl -fsS http://127.0.0.1:20128/v1/models 2>/dev/null | grep -q 'deepseek-v4.1-flash-free'; then MODELS_OK=1; break; fi
+            sleep 10
+          done
+          if [ "$MODELS_OK" = 1 ]; then echo '✅ deepseek-v4.1-flash-free is advertised in OmniRoute /v1/models'; else echo '⚠️ deepseek-v4.1-flash-free NOT in /v1/models yet — check the provider connection in the dashboard'; fi
+          echo "✅ OmniRoute live: dashboard http://$(tailscale ip -4 2>/dev/null | head -1):20128 (password = runner password; /v1 needs no key in this trial)"
+
+      - name: 13. Install Hermes Agent & restore config + MCPs + start Telegram gateway
+        env:
+          HERMES_API_KEY: ${{ secrets.HERMES_CUSTOM_API_KEY }}
+          GH_TOKEN: ${{ secrets.MY_PAT }}
+          TELEGRAM_ALLOWED_USERS: ${{ secrets.TELEGRAM_ALLOWED_USERS }}  # shared across all instances
+          # Bot token picked dynamically: TELEGRAM_BOT_TOKEN_<WF_NAME>.
+          # Uniform scheme — rename the old bare TELEGRAM_BOT_TOKEN to TELEGRAM_BOT_TOKEN_MAITY.
+          TELEGRAM_BOT_TOKEN: ${{ secrets[format('TELEGRAM_BOT_TOKEN_{0}', env.WF_NAME)] }}
+        run: |
+          echo "✅ Using Telegram bot: $WF_NAME (token: TELEGRAM_BOT_TOKEN_${WF_NAME})"
+
+          # 1. Install Hermes Agent
+          curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+          echo '✅ Hermes Agent installed'
+          # Make sure uvx (used by the postgis MCP) is on PATH — Hermes ships it under ~/.hermes/bin
+          export PATH="$HOME/.hermes/bin:$PATH"
+
+          # 2. Restore hermes state (config, memories, skills, cron, hooks, etc.) from repo
+          mkdir -p /home/runner/.hermes
+          H="${GITHUB_WORKSPACE:-.}/hermes/instances/${WF_NAME}"
+          D=/home/runner/.hermes
+          for item in memories skills cron hooks platforms sessions kanban plugins; do
+            [ -d "$H/$item" ] && cp -r "$H/$item" "$D/"
+          done
+          for f in SOUL.md config.yaml kanban.db channel_directory.json \
+                   gateway_state.json .skills_prompt_snapshot.json; do
+            [ -f "$H/$f" ] && cp "$H/$f" "$D/"
+          done
+          echo '✅ Restored hermes state from repo (hermes/instances/${WF_NAME}/ → ~/.hermes/)'
+          # TRIAL PIN (OmniRoute): Hermes asks 9router for the combo model
+          # named `code`; OmniRoute has no such combo, so pin the runner's
+          # config.yaml to the explicit Zen model id. config.yaml is restored
+          # from the repo in §2 but never synced back (step 16), so this pin
+          # is ephemeral and never pollutes the committed config.
+          sed -i 's/^  default: code$/  default: opencode-zen\/deepseek-v4.1-flash-free/' ~/.hermes/config.yaml
+          sed -i 's/^    model: code$/    model: opencode-zen\/deepseek-v4.1-flash-free/' ~/.hermes/config.yaml
+          if grep -qE '^\s+(default|model): code$' ~/.hermes/config.yaml; then
+            echo '❌ Trial pin failed: a `code` model line remains in config.yaml'; exit 1
+          fi
+          if ! grep -q '^  default: opencode-zen/deepseek-v4.1-flash-free$' ~/.hermes/config.yaml || ! grep -q '^    model: opencode-zen/deepseek-v4.1-flash-free$' ~/.hermes/config.yaml; then
+            echo '❌ Trial pin failed: pinned model lines not found in config.yaml'; exit 1
+          fi
+          echo '✅ Trial pin: config.yaml model pinned to opencode-zen/deepseek-v4.1-flash-free (ephemeral)'
+          # 3. Write the .env with secrets pulled from GitHub Secrets.
+          #    The home channel is the same as the allowed user id (single value),
+          #    so we reuse TELEGRAM_ALLOWED_USERS for TELEGRAM_HOME_CHANNEL too.
+          #    api_key in config.yaml is an env ref (${HERMES_CUSTOM_..._API_KEY}),
+          #    so the actual key is supplied here — never committed to the repo.
+          {
+            echo "HERMES_CUSTOM_127_0_0_1_20128_API_KEY=${HERMES_API_KEY}"
+            echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}"
+            echo "TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}"
+            echo "TELEGRAM_HOME_CHANNEL=${TELEGRAM_ALLOWED_USERS}"
+            echo "GITHUB_TOKEN=${GH_TOKEN}"
+            echo "HERMES_PEER_CANDLE_KEY=${HERMES_API_KEY}"
+            echo "HERMES_PEER_KIMYA_KEY=${HERMES_API_KEY}"
+            echo "HERMES_PEER_REBECCA_KEY=${HERMES_API_KEY}"
+            echo "HERMES_PEER_REYHANE_KEY=${HERMES_API_KEY}"
+            echo "HERMES_PEER_SEVDA_KEY=${HERMES_API_KEY}"
+          } > ~/.hermes/.env
+          chmod 600 ~/.hermes/.env
+          echo '✅ Wrote ~/.hermes/.env from secrets'
+
+          # 4. Install MCP servers + the shadcn/improve skill.
+          #    4a. Laravel Boost MCP (php artisan boost:mcp — provided by laravel/boost)
+          #        Must run inside h-dashboard: `composer require` in the workflow's
+          #        working dir (the my-rey workspace) would install the package into
+          #        the wrong project and litter composer.json/vendor/ at its root.
+          cd /home/runner/h-dashboard
+          composer require laravel/boost --no-interaction 2>&1 | tail -3 || true
+          if [ -f /home/runner/h-dashboard/artisan ]; then
+            php artisan boost:update 2>/dev/null || true
+            echo '✅ Laravel Boost package present (MCP: php artisan boost:mcp)'
+          fi
+
+          #    4b. shadcn/improve is an AGENT SKILL, not an MCP server.
+          npx -y skills add shadcn/improve 2>&1 | tail -3 || true
+          echo '✅ shadcn/improve skill added'
+
+          #    4c. Context7 MCP (documentation lookup)
+          hermes mcp install context7 2>&1 || true
+          echo '✅ Context7 MCP installed'
+
+          #    4d. GitHub MCP Server (issues, PRs, code search via MCP protocol)
+          echo "Y" | hermes mcp add github \
+            --command npx \
+            --args -y @modelcontextprotocol/server-github \
+            --env "GITHUB_PERSONAL_ACCESS_TOKEN=$GH_TOKEN" \
+            --connect-timeout 60 2>&1 || true
+          echo '✅ GitHub MCP Server installed (26 tools: issues, PRs, code search, repos)'
+
+          #    4e. Superpowers plugin — must be INSTALLED here.
+          #        The instance backup holds no usable superpowers copy
+          #        (step 16 strips git-repo plugins from the sync — a
+          #        recorded gitlink would break the next checkout), yet
+          #        the restored config.yaml lists superpowers under
+          #        plugins.enabled: Hermes looks for a plugin that is
+          #        not on disk and errors. Install it fresh from
+          #        upstream, before the gateway starts.
+          #        --enable makes it non-interactive (a plain install prompts
+          #        'Enable now? [y/N]' and would hang/fail on a runner).
+          #        The rm -rf first keeps this idempotent if a partial or
+          #        empty plugins/superpowers dir is ever restored later.
+          rm -rf ~/.hermes/plugins/superpowers
+          hermes plugins install obra/superpowers --enable 2>&1 | tail -5 || true
+          if [ ! -f ~/.hermes/plugins/superpowers/.hermes-plugin/plugin.yaml ]; then
+            echo '⚠️ hermes plugins install produced no plugin — falling back to git clone'
+            rm -rf ~/.hermes/plugins/superpowers
+            git clone https://github.com/obra/superpowers.git ~/.hermes/plugins/superpowers
+            hermes plugins enable superpowers 2>&1 | tail -3 || true
+          fi
+          if hermes plugins list 2>/dev/null | grep -qi superpowers; then
+            echo '✅ Superpowers plugin installed (obra/superpowers, enabled)'
+          else
+            echo '⚠️ Superpowers NOT in `hermes plugins list` — check install output above'
+          fi
+
+          # 5. Write the mcp_servers block into ~/.hermes/config.yaml.
+          #    Appended only if not already present.
+          if ! grep -q "mcp_servers" ~/.hermes/config.yaml; then
+            # Build the PostGIS connection string from h-dashboard's .env (creds are static there).
+            HD_ENV=/home/runner/h-dashboard/.env
+            if [ -f "$HD_ENV" ]; then
+              PG_HOST=$(grep -E '^DB_HOST=' "$HD_ENV" | cut -d= -f2-)
+              PG_PORT=$(grep -E '^DB_PORT=' "$HD_ENV" | cut -d= -f2-)
+              PG_DB=$(grep -E '^DB_DATABASE=' "$HD_ENV" | cut -d= -f2-)
+              PG_USER=$(grep -E '^DB_USERNAME=' "$HD_ENV" | cut -d= -f2-)
+              PG_PASS=$(grep -E '^DB_PASSWORD=' "$HD_ENV" | cut -d= -f2-)
+              PG_URL="postgresql://${PG_USER}:***@${PG_HOST}:${PG_PORT}/${PG_DB}"
+            else
+              PG_URL="postgresql://h_dashboard:***@127.0.0.1:5432/h_dashboard"
+            fi
+            printf '\nmcp_servers:\n  laravel-boost:\n    command: php\n    args: ["artisan", "boost:mcp"]\n    cwd: /home/runner/h-dashboard\n  postgis:\n    command: uvx\n    args: ["mcp-postgis"]\n    env:\n      MCP_POSTGIS_DATABASE_URL: "%s"\n      MCP_POSTGIS_MODE: read_only\n  github:\n    command: npx\n    args: ["-y", "@modelcontextprotocol/server-github"]\n    env:\n      GITHUB_PERSONAL_ACCESS_TOKEN: "%s"\n    timeout: 120\n    connect_timeout: 60\n' "$PG_URL" "$GH_TOKEN" >> ~/.hermes/config.yaml
+            echo '✅ Appended mcp_servers (laravel-boost + postgis + github) to config.yaml'
+          else
+            echo '✅ mcp_servers already present in config.yaml'
+          fi
+
+          # 7. Start the Hermes messaging gateway (Telegram) in the background.
+          #    On GitHub runners there is no systemd, so run in foreground under nohup.
+          nohup hermes gateway run --replace > /tmp/hermes-gateway.log 2>&1 &
+          sleep 6
+          if curl -fsS http://127.0.0.1:20128 > /dev/null 2>&1; then
+            echo '✅ OmniRoute still live; Hermes gateway launching…'
+          fi
+          echo '✅ Hermes gateway launch attempted (logs: /tmp/hermes-gateway.log)'
+
+          # 8. Seed instructions -> real execution + send result to Telegram.
+          #    `hermes send` alone NEVER executes — it only relays text.
+          #    So: (a) run a real `hermes chat -q` warmup, (b) send the RESULT.
+          #    No .hermes.md is written: AGENTS.md is the authoritative
+          #    instruction file for h-dashboard and .hermes.md is not wanted.
+          SEED_FILE="${GITHUB_WORKSPACE:-.}/hermes/instances/${WF_NAME}/seed-message.txt"
+          HD_DIR=/home/runner/h-dashboard
+          if [ -f "$SEED_FILE" ]; then
+            sleep 3
+            rm -f "$HD_DIR/.hermes.md"
+            # 8a. Real agent execution — capture output to send to Telegram.
+            SEED_RESULT=$(cd "$HD_DIR" && hermes chat -q "$(cat "$SEED_FILE")" 2>/tmp/seed-warmup.log) \
+              && echo '✅ Seed executed via hermes chat' \
+              || echo '⚠️ Seed execution failed (see /tmp/seed-warmup.log)'
+            # 8b. Send the execution result (not the raw seed) to Telegram.
+            if [ -n "$SEED_RESULT" ]; then
+              echo "$SEED_RESULT" > /tmp/seed-result.txt
+              hermes send --to telegram --file /tmp/seed-result.txt \
+                && echo '✅ Seed result sent to Telegram' \
+                || echo '⚠️ Seed result failed to send'
+            else
+              hermes send --to telegram "kylie online and ready." \
+                && echo '✅ Welcome message sent to Telegram' \
+                || echo '⚠️ Welcome message failed to send'
+            fi
+          else
+            echo '⚠️ hermes/instances/${WF_NAME}/seed-message.txt not found — skipping seed prompt'
+          fi
+
+      - name: 14. Start Laravel Development Server
+        run: |
+          cd /home/runner/h-dashboard
+          nohup php artisan serve --host=0.0.0.0 > /dev/null 2>&1 &
+          echo '✅ Laravel server started on port 8000'
+
+      - name: 15. Server Keep-Alive (5h 40m)
+        run: |
+          for i in {1..340}; do
+            sleep 60
+            echo "[$i/340] Server is active (SSH + Laravel on port 8000)..."
+          done
+
+      - name: 16. Sync hermes state back (TRIAL — no 9router/omniroute db)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.MY_PAT }}
+        run: |
+          cd "${GITHUB_WORKSPACE:-.}"
+          git config user.name "Shabakebehdasht"
+          git config user.email "Shabakebehdasht@users.noreply.github.com"
+          # Authenticate with PAT for push
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/Shabakebehdasht/my-rey.git"
+
+          H=/home/runner/.hermes
+          HDEST="hermes/instances/${WF_NAME}"
+
+          # 1. Copy all dynamic hermes dirs & files back to repo
+          mkdir -p "$HDEST"
+          for item in memories skills cron hooks platforms sessions kanban plugins; do
+            [ -d "$H/$item" ] && cp -r "$H/$item" "$HDEST/"
+          done
+          for f in SOUL.md kanban.db state.db channel_directory.json \
+                   gateway_state.json .skills_prompt_snapshot.json; do
+            [ -f "$H/$f" ] && cp "$H/$f" "$HDEST/"
+          done
+          # General guard — never sync back a plugin that is itself a git
+          # repo (anything installed via `hermes plugins install` is one,
+          # superpowers included). cp -r + `git add hermes/` would record
+          # such a dir as a gitlink (mode 160000) with no .gitmodules, and
+          # the NEXT run's checkout step dies in its 'Removing auth' phase:
+          #   fatal: No url found for submodule path
+          #   'hermes/plugins/<name>' in .gitmodules
+          # That is exactly the failure this guard prevents. Git-repo plugins are upstream
+          # code: re-install them in step 13 (like superpowers, §4e) instead
+          # of backing them up. Plain-file plugins (no .git) sync as before.
+          if [ -d "$HDEST/plugins" ]; then
+            for p in "$HDEST/plugins"/*/; do
+              if [ -e "${p}.git" ]; then
+                echo "🧹 Excluding git-repo plugin from sync: $p"
+                rm -rf "$p"
+              fi
+            done
+          fi
+          # Generalized guard — strip ANY nested .git left anywhere in
+          # the backup, not just under plugins/ (a skill or hook cloned
+          # from a git repo carries one too): a recorded gitlink with
+          # no .gitmodules breaks the next checkout exactly the same
+          # way. Same fix as the my-opencode sync step.
+          find "$HDEST" -name .git -type d -prune -exec rm -rf {} + 2>/dev/null || true
+          find "$HDEST" -name .git -type f -delete 2>/dev/null || true
+          echo '✅ Copied hermes dynamic state → hermes/instances/${WF_NAME}/ for backup'
+
+          # TRIAL: no 9router db and no OmniRoute DB sync — OmniRoute state
+          # lives in ~/.omniroute (SQLite, holds encrypted keys) and is
+          # deliberately never committed.
+
+          # 2b. Scrub secrets from the synced state BEFORE staging: Hermes
+          # persists a GitHub PAT inside state.db, and GitHub push
+          # protection (GH013) rejects any push containing it - which
+          # silently killed every state backup (the step's fallback
+          # printed a false success). Replace PAT-shaped strings with
+          # equal-length placeholders so SQLite/JSON files stay valid and
+          # no secret is ever committed.
+          for _f in state.db kanban.db gateway_state.json channel_directory.json .skills_prompt_snapshot.json; do
+            if [ -f "$HDEST/$_f" ]; then
+              python3 -c 'import re,sys; p=sys.argv[1]; d=open(p,"rb").read(); n=re.sub(rb"(?:ghp|gho|ghu|ghs|ghr|ghf)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}", lambda m: b"X"*len(m.group(0)), d); open(p,"wb").write(n); print("scrubbed secret(s) from "+p) if n!=d else None' "$HDEST/$_f" || echo "WARNING: scrub failed for $HDEST/$_f"
+            fi
+          done
+
+          # 3. Commit & push if anything changed
+          # Stage FIRST, then judge from the staged diff: plain `git diff`
+          # is blind to untracked files, so checking before `git add` misses
+          # a brand-new backup file/dir entirely — that is exactly the
+          # my-op1 op2 bug (2026-10-07): the step reported success in <1s
+          # and pushed nothing, and the backup died with the ephemeral runner.
+          git add -A hermes/
+          if git diff --cached --quiet; then
+            echo 'ℹ️ No changes to commit'
+          else
+            git commit -m "Sync hermes state from kylie instance (omniroute trial)"
+            # Pull first in case another run pushed before us
+            git pull --rebase origin "${{ github.ref_name }}" || true
+            if git push origin "${{ github.ref_name }}"; then
+              echo '✅ Hermes data synced to my-rey'
+            else
+              echo '❌ Push failed — no backup commit landed'
+              exit 1
+            fi
+          fi
+
+      - name: 17. Tailscale Logout (cleanup on shutdown)
+        if: always()
+        run: |
+          sudo tailscale logout || true
+          echo "✅ Tailscale logout executed — hostname freed"
