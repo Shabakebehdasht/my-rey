@@ -312,7 +312,7 @@ jobs:
             exit 1
           fi
           cd ~/.zen-proxy
-          HOST=127.0.0.1 PORT=20128 \
+          HOST=0.0.0.0 PORT=20128 \
             MODEL_ALIASES='{"code":"deepseek-v4.1-flash-free"}' \
             DEFAULT_MODEL=deepseek-v4.1-flash-free \
             PROXY_KEY="$HERMES_API_KEY" \
@@ -322,7 +322,7 @@ jobs:
             echo '❌ zen-proxy started under Node, not Bun — see /tmp/zen-proxy.log'
             exit 1
           fi
-          if ! grep -q 'zen-proxy listening on http://127.0.0.1:20128' /tmp/zen-proxy.log; then
+          if ! grep -q 'zen-proxy listening on http://.*:20128' /tmp/zen-proxy.log; then
             echo '❌ zen-proxy did not report listening on :20128 — see /tmp/zen-proxy.log'
             cat /tmp/zen-proxy.log
             exit 1
