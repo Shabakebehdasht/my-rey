@@ -285,6 +285,17 @@ jobs:
           if [ "$NPM_MAJOR" -ge 11 ] 2>/dev/null; then ALLOW_SCRIPTS="--allow-scripts"; else ALLOW_SCRIPTS=""; fi
           # Pin the exact release: OmniRoute config formats drift between minors.
           npm install -g "omniroute@3.8.52" $ALLOW_SCRIPTS || npm install -g "omniroute@3.8.52"
+          # Each step runs in a fresh shell, so step 3's PATH export does not
+          # reach this step (verified in run 41222047798: install succeeded
+          # but `command -v omniroute` failed). Resolve the global bin dir
+          # from npm itself, put it on PATH here, and persist it for later
+          # steps (step 12 starts the server by bare `omniroute` name).
+          NPM_PREFIX="$(npm config get prefix 2>/dev/null || true)"
+          NPM_PREFIX="${NPM_PREFIX/#\~/$HOME}"
+          if [ -n "$NPM_PREFIX" ]; then
+            export PATH="$NPM_PREFIX/bin:$PATH"
+            if [ -n "${GITHUB_PATH:-}" ]; then echo "$NPM_PREFIX/bin" >> "$GITHUB_PATH"; fi
+          fi
           if ! command -v omniroute >/dev/null 2>&1; then
             echo '❌ omniroute binary not found after installation'; exit 1
           fi
@@ -349,6 +360,12 @@ jobs:
           # (off by default). OPENCODE_V2_CLIENT_FINGERPRINT_ENABLED=true:
           # v2 CLI identity (off by default). Both are the two pieces the
           # Oct 2026 Zen-gate diagnosis says the free lane needs.
+          # Same fresh-shell PATH fix as step 11: resolve the npm global
+          # bin dir and put it on PATH so `omniroute serve` is found
+          # even if the GITHUB_PATH entry did not carry over.
+          NPM_PREFIX="$(npm config get prefix 2>/dev/null || true)"
+          NPM_PREFIX="${NPM_PREFIX/#\~/$HOME}"
+          if [ -n "$NPM_PREFIX" ]; then export PATH="$NPM_PREFIX/bin:$PATH"; fi
           set -a; . /tmp/omniroute-secrets.env; set +a
           export HOST=0.0.0.0 PORT=20128 NEXT_PUBLIC_PORT=20128
           export DATA_DIR="$HOME/.omniroute" REQUIRE_API_KEY=false
