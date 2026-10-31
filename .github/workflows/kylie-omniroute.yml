@@ -252,11 +252,11 @@ jobs:
             echo '⚠️ CodeGraph not on PATH — skipping index'
           fi
 
-      - name: 11. Install OmniRoute 3.8.53 + write first-boot secrets (TRIAL — replaces 9router)
+      - name: 11. Install OmniRoute 3.8.52 + write first-boot secrets (TRIAL — replaces 9router)
         env:
           RUNNER_PASSWORD: ${{ secrets.RUNNER_PASSWORD }}
         run: |
-          # OmniRoute (cheaper-inference/OmniRoute, pinned 3.8.53) replaces 9router
+          # OmniRoute (cheaper-inference/OmniRoute, pinned 3.8.52) replaces 9router
           # in this trial. No wreq-js install: OmniRoute bundles its own wreq-js
           # TLS-fingerprint runtime. No Bun: OmniRoute runs on Node.
           # Node engines: >=22.22.2 <23 || >=24 <27. The runner's default node
@@ -284,12 +284,12 @@ jobs:
           NPM_MAJOR=$(npm --version | cut -d. -f1)
           if [ "$NPM_MAJOR" -ge 11 ] 2>/dev/null; then ALLOW_SCRIPTS="--allow-scripts"; else ALLOW_SCRIPTS=""; fi
           # Pin the exact release: OmniRoute config formats drift between minors.
-          npm install -g "omniroute@3.8.53" $ALLOW_SCRIPTS || npm install -g "omniroute@3.8.53"
+          npm install -g "omniroute@3.8.52" $ALLOW_SCRIPTS || npm install -g "omniroute@3.8.52"
           if ! command -v omniroute >/dev/null 2>&1; then
             echo '❌ omniroute binary not found after installation'; exit 1
           fi
           omniroute --version >/dev/null 2>&1 || omniroute --help 2>/dev/null | grep -q 'serve' || { echo '❌ omniroute CLI did not respond to --version/--help'; exit 1; }
-          echo "✅ OmniRoute installed: $(omniroute --version 2>/dev/null || echo 3.8.53)"
+          echo "✅ OmniRoute installed: $(omniroute --version 2>/dev/null || echo 3.8.52)"
           # First-boot secrets. The npm install copies .env.example to .env in
           # the package dir; its CHANGEME values are publicly known, so rewrite
           # the three required secrets with fresh values. Dashboard password =
@@ -336,7 +336,7 @@ jobs:
             echo '❌ CHANGEME secret left in OmniRoute .env'; exit 1
           fi
           mkdir -p ~/.omniroute
-          echo '✅ OmniRoute 3.8.53 installed; first-boot secrets written'
+          echo '✅ OmniRoute 3.8.52 installed; first-boot secrets written'
 
       - name: 12. Start OmniRoute on :20128 + connect opencode-zen (TRIAL — replaces 9router db restore)
         run: |
