@@ -74,7 +74,7 @@
     "patch_count": 9,
     "patch_generation": 9,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 6,
     "view_count": 6
   },
@@ -90,7 +90,7 @@
     "patch_count": 9,
     "patch_generation": 9,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 7,
     "view_count": 7
   },
@@ -106,7 +106,7 @@
     "patch_count": 2,
     "patch_generation": 2,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 15,
     "view_count": 15
   },
@@ -172,7 +172,7 @@
     "view_count": 44
   },
   "hermes-plugin-install": {
-    "archived_at": null,
+    "archived_at": "2026-11-04T21:56:29.550912+00:00",
     "created_at": "2026-10-04T19:17:46.637482+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -183,7 +183,7 @@
     "patch_count": 3,
     "patch_generation": 3,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 3,
     "view_count": 3
   },
@@ -230,7 +230,7 @@
     "patch_count": 22,
     "patch_generation": 22,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 23,
     "view_count": 23
   },
@@ -266,7 +266,7 @@
     "view_count": 4
   },
   "respecting-format-requests": {
-    "archived_at": null,
+    "archived_at": "2026-11-04T21:56:29.579396+00:00",
     "created_at": "2026-10-05T16:38:42.661003+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -277,7 +277,7 @@
     "patch_count": 2,
     "patch_generation": 2,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 1,
     "view_count": 1
   },
