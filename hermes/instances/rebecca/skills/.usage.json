@@ -1,6 +1,6 @@
 {
   "agent-docs-audit": {
-    "archived_at": null,
+    "archived_at": "2026-11-04T23:33:02.091769+00:00",
     "created_at": "2026-10-01T09:14:28.319691+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -11,7 +11,7 @@
     "patch_count": 6,
     "patch_generation": 6,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 4,
     "view_count": 4
   },
@@ -32,7 +32,7 @@
     "view_count": 1
   },
   "docs-claims-audit": {
-    "archived_at": null,
+    "archived_at": "2026-11-04T23:33:02.149402+00:00",
     "created_at": "2026-10-01T09:29:12.412654+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -43,7 +43,7 @@
     "patch_count": 0,
     "patch_generation": 0,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 2,
     "view_count": 2
   },
@@ -172,7 +172,7 @@
     "view_count": 1
   },
   "hermes-extensions": {
-    "archived_at": null,
+    "archived_at": "2026-11-04T23:33:02.182184+00:00",
     "created_at": "2026-10-04T19:02:57.538620+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -183,7 +183,7 @@
     "patch_count": 7,
     "patch_generation": 7,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 3,
     "view_count": 3
   },
@@ -214,12 +214,12 @@
     "patch_count": 1,
     "patch_generation": 1,
     "pinned": false,
-    "state": "active",
+    "state": "stale",
     "use_count": 2,
     "view_count": 2
   },
   "laravel-patterns": {
-    "archived_at": null,
+    "archived_at": "2026-11-04T23:33:02.261228+00:00",
     "created_at": "2026-09-22T10:37:08.109190+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -230,7 +230,7 @@
     "patch_count": 11,
     "patch_generation": 11,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 11,
     "view_count": 11
   },
