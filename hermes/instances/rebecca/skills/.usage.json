@@ -79,7 +79,7 @@
     "view_count": 1
   },
   "git-workflow": {
-    "archived_at": null,
+    "archived_at": "2026-11-12T04:17:34.878794+00:00",
     "created_at": "2026-09-21T18:58:10.077603+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -90,7 +90,7 @@
     "patch_count": 10,
     "patch_generation": 10,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 17,
     "view_count": 17
   },
