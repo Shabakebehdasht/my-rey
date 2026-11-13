@@ -1,7 +1,7 @@
 ---
 name: h-dashboard-session
 description: "Use when working in h-dashboard repo."
-version: 1.1.0
+version: 1.2.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -241,6 +241,67 @@ that path, keep these invariants:
   success path; on failure delete it to avoid orphans (tries = 1, no replay).
 - **`dispatch('…-imported')` fires synchronously even under QUEUE_CONNECTION=sync.**
   Keep it after `resetForm()`; tests assert it. Do not move it before the job.
+
+## 6f. CSP-safe expressions — the repo's #1 silent-failure class
+
+The app runs `LIVEWIRE_CSP_SAFE` (default true) → `livewire.csp.js`, so both
+Alpine's CSP build and Livewire's CSP expression parser are live. Two shapes are
+**inert with no error** — the widget renders, clicks do nothing:
+
+- **More than one statement in a `wire:` action** (`wire:click="$dispatch(…); $set(…)"`).
+  The parser accepts one expression + one optional trailing `;`, so the whole
+  handler dies (`Livewire Expression Error: CSP Parser Error: Unexpected token: $wire`)
+  — no dispatch, no request. Split into two single-statement directives instead;
+  that combination is verified working.
+- **`x-data` as a call / object literal** (`x-data="initTrafficChart('a', 7200)"`).
+  It evaluates to an *empty* data object, `x-init="method($el)"` never runs, and
+  nothing logs. Correct shape: `Alpine.data('name', () => ({ init(){…} }))` in
+  `resources/js/*` + `x-data="name"` + `data-*` attributes.
+
+Also: `$wire.prop = x` inside a directive expression is a silent no-op (write
+state from plain JS listeners in the factory). Before rewriting a template,
+probe the form in the browser (`Object.keys(Alpine.$data(el))`, then
+`Alpine.initTree(probeButton)` with the candidate directives) — never assume a
+form works because it looks like the vendor example.
+→ full rules, verified table, probes, migration greps: `references/csp-expressions.md`
+
+## 6g. Prove a UI bug in the real app before blaming the harness
+
+A failing E2E spec does not mean the app is fine. Reproduce in the running dev
+server first — it is minutes cheaper than `scripts/e2e-test.sh` and answers "is
+this a product bug or a stale test?" with evidence:
+
+- Seeded demo logins: `database/seeders/UsersTableSeeder.php` — n_codes
+  `4411015056` / `4400176134` / `4400176143`, shared password `12345678`; dev
+  server on `:8000`, dev DB `h_dashboard` (already has ~300 persons/devices).
+- Drive it in a real browser: login, go to the page, then read the component's
+  Alpine state and the Livewire property from the DOM instead of guessing.
+- Hook `window.fetch` **after** navigation (a page load wipes `window` state) to
+  see whether the click produced a `/livewire-<hash>/update` at all, and to read
+  the `/_boost/browser-logs` payload (that is where CSP parser warns land).
+- `public/build` is gitignored: if it is older than `resources/js`, the browser
+  runs stale JS. Check that the built asset contains the factory you are
+  debugging (grep the minified name) and `npm run build` when it does not.
+
+## 6h. Reading the E2E job — a green conclusion means nothing
+
+The `e2e` job carries job-level `continue-on-error: true`, so GitHub reports
+`conclusion: success` even with tests failing (`gh api …/actions/jobs/<id>`).
+The only trustworthy signal is the list reporter's own grammar in the job log:
+`N failed`, `N flaky`, `N did not run`, `N passed`.
+
+- **`did not run` is usually a serial-mode cascade**, not a timeout: after the
+  first failure in a `test.describe.configure({ mode: 'serial' })` file the rest
+  are skipped. Confirm by finding `-` lines right after the `✘`; assert absence
+  of `Test timeout of` / `browser has been closed` before blaming the worker.
+- **`flaky` = passed on retry, so it still counts as not-green.** The classic
+  cause here: `waitForLivewire()` resolves on the *response* while the DOM morph
+  lands after it, so an immediate `innerText`/`getAttribute` snapshot reads the
+  pre-morph DOM. Use web-first assertions (`expect(locator).not.toHaveText(…)`)
+  or `expect.poll(…)`, never a bare snapshot compare.
+- Any "two consecutive green runs" counter must be computed from those parsed
+  counts (`failed == 0 && flaky == 0 && did_not_run == 0`), never from the job
+  conclusion.
 
 ## 7. Pull requests
 When the user says `pr`, open a PR from the current branch to `beta` of
