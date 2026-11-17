@@ -135,5 +135,49 @@
       "chat_topic": null,
       "message_id": "2741"
     }
+  },
+  "agent:main:local:dm:local-9ab1d4e73ef8d11830b19012bd080074422991e01040a4e657ed234bb68ddfce": {
+    "session_key": "agent:main:local:dm:local-9ab1d4e73ef8d11830b19012bd080074422991e01040a4e657ed234bb68ddfce",
+    "session_id": "local-9ab1d4e73ef8d11830b19012bd080074422991e01040a4e657ed234bb68ddfce",
+    "created_at": "2026-11-17T11:03:25.278419",
+    "updated_at": "2026-11-17T11:03:26.137090",
+    "display_name": null,
+    "platform": "local",
+    "chat_type": "dm",
+    "metadata": {
+      "terminal_cwd": "/home/runner/h-dashboard"
+    },
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "total_tokens": 0,
+    "last_prompt_tokens": 0,
+    "estimated_cost_usd": 0.0,
+    "cost_status": "unknown",
+    "expiry_finalized": false,
+    "suspended": false,
+    "resume_pending": false,
+    "resume_reason": null,
+    "yolo": false,
+    "yolo_toggle": null,
+    "last_resume_marked_at": null,
+    "active_turn_token": "596a9aaa42834e718cf64d9a57c95046",
+    "active_turn_started_at": "2026-11-17T11:03:26.137054+00:00",
+    "is_fresh_reset": false,
+    "was_auto_reset": false,
+    "auto_reset_reason": null,
+    "reset_had_activity": false,
+    "prev_session_id": null,
+    "origin": {
+      "platform": "local",
+      "chat_id": "local-9ab1d4e73ef8d11830b19012bd080074422991e01040a4e657ed234bb68ddfce",
+      "chat_name": null,
+      "chat_type": "dm",
+      "user_id": "uid:1001",
+      "user_name": null,
+      "thread_id": null,
+      "chat_topic": null
+    }
   }
 }
