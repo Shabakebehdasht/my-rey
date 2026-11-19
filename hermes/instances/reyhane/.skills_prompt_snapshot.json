@@ -1,579 +1,579 @@
 {
   "version": 5,
   "manifest": {
-    "research/DESCRIPTION.md": [
-      1795040260174799278,
-      179,
-      10007942,
-      1795040260174799278,
-      "e7c50d312d69f35ac7fae94423f1974d"
-    ],
-    "research/llm-wiki/SKILL.md": [
-      1795040260175064295,
-      20121,
-      10008100,
-      1795040260175064295,
-      "5a7972a255b4e17a9e775eabdf3c0a68"
-    ],
-    "research/competitor-news-monitor/SKILL.md": [
-      1795040260174887076,
-      4619,
-      10007929,
-      1795040260174887076,
-      "81445419176c38884a6f948b0a899940"
-    ],
-    "research/rss-feeds/SKILL.md": [
-      1795040260175094371,
-      4557,
-      10008102,
-      1795040260175094371,
-      "8ea9f76170b400a8aadc5ec7f5196c1a"
-    ],
-    "research/grounded-citations/SKILL.md": [
-      1795040260174917077,
-      12644,
-      10007931,
-      1795040260174917077,
-      "03a41bc3b06db1139382ebc259282f19"
-    ],
-    "research/arxiv/SKILL.md": [
-      1795040260174826254,
-      10061,
-      10007939,
-      1795040260174826254,
-      "a007079c25d720cc360aa3bcb64c5f71"
-    ],
-    "git-workflow/SKILL.md": [
-      1795040260171209994,
-      3498,
-      10008027,
-      1795040260171209994,
-      "6637b23db3e237dd4385953e933ccb2c"
-    ],
-    "creative/DESCRIPTION.md": [
-      1795040260166066565,
-      116,
-      10007943,
-      1795040260166066565,
-      "46e64cc16943251684fdc5126fddf033"
-    ],
-    "creative/ascii-video/SKILL.md": [
-      1795040260166200018,
-      15011,
-      10007756,
-      1795040260166200018,
-      "cb017f3ca2f771147a41430c5721560c"
-    ],
-    "creative/popular-web-designs/SKILL.md": [
-      1795040260168883824,
-      9869,
-      10007768,
-      1795040260168883824,
-      "d1273c5836c9c6becaddab897b514fe9"
-    ],
-    "creative/manim-video/SKILL.md": [
-      1795040260167963604,
-      12150,
-      10007825,
-      1795040260167963604,
-      "f2af4a334697dc8c74da4c1ea14adb62"
-    ],
-    "creative/claude-design/SKILL.md": [
-      1795040260167738953,
-      25204,
-      10007845,
-      1795040260167738953,
-      "1352559bea8ac5b0623da83df41742b3"
-    ],
-    "creative/p5js/SKILL.md": [
-      1795040260168409745,
-      27534,
-      10007847,
-      1795040260168409745,
-      "9fbb0f962c7608d35a14ffab5f067644"
-    ],
-    "creative/baoyu-infographic/SKILL.md": [
-      1795040260166746503,
-      10490,
-      10007868,
-      1795040260166746503,
-      "6da76db092943a156bcc61dd854383e1"
-    ],
-    "creative/architecture-diagram/SKILL.md": [
-      1795040260166096267,
-      5830,
-      10007919,
-      1795040260166096267,
-      "580c2fe8a1e76857dff79af21b466e62"
-    ],
-    "creative/songwriting-and-ai-music/SKILL.md": [
-      1795040260170906728,
-      10963,
-      10007923,
-      1795040260170906728,
-      "01af829788c9bb87b71544d2ff3411e5"
-    ],
-    "creative/humanizer/SKILL.md": [
-      1795040260167882432,
-      34463,
-      10007925,
-      1795040260167882432,
-      "d9f8905ea5969ba66305cda0dfa1f87c"
-    ],
-    "creative/design-md/SKILL.md": [
-      1795040260167804462,
-      8477,
-      10008018,
-      1795040260167804462,
-      "4366ec3fda3c6f18daf5afdd6aae1fc2"
-    ],
-    "social-media/DESCRIPTION.md": [
-      1795040260175143855,
-      151,
-      10007944,
-      1795040260175143855,
-      "d54f750ff827117e4b40c9f76d64fb00"
-    ],
-    "social-media/xurl/SKILL.md": [
-      1795040260175235043,
-      16345,
-      10007753,
-      1795040260175235043,
-      "2312530a9deef9748cec23b384f47f59"
-    ],
-    "social-media/reddit-reading/SKILL.md": [
-      1795040260175174563,
-      6279,
-      10008106,
-      1795040260175174563,
-      "193e12a0f69fbcd9fab23cb125383233"
-    ],
     "improve/SKILL.md": [
-      1795040260171234875,
+      1795084909548787993,
       9042,
-      10008029,
-      1795040260171234875,
+      10008064,
+      1795084909548787993,
       "4db5581ece5b218105551a5f4168e363"
     ],
     "improve/read-the-damn-docs/SKILL.md": [
-      1795040260171260997,
+      1795084909548855552,
       2851,
-      10008031,
-      1795040260171260997,
+      10008066,
+      1795084909548855552,
       "186658d1f1a4f18427a99d3057fbaa3a"
     ],
-    "autonomous-ai-agents/DESCRIPTION.md": [
-      1795040260165018187,
-      211,
-      10007945,
-      1795040260165018187,
-      "c60a15744ecd672feb6fcce626191da4"
-    ],
-    "autonomous-ai-agents/hermes-plugin-install/SKILL.md": [
-      1795040260165943706,
-      3745,
-      10008009,
-      1795040260165943706,
-      "4fae3c41c6a68d338df6ec517246ab91"
-    ],
-    "autonomous-ai-agents/codex/SKILL.md": [
-      1795040260165106371,
-      5852,
-      10007720,
-      1795040260165106371,
-      "6616d33f09f2291ed866a74c51684074"
-    ],
-    "autonomous-ai-agents/hermes-agent/SKILL.md": [
-      1795040260165180810,
-      13237,
-      10007722,
-      1795040260165180810,
-      "5e93695399fcb529dc8c9c816c76bc52"
-    ],
-    "autonomous-ai-agents/opencode/SKILL.md": [
-      1795040260165997087,
-      7297,
-      10008013,
-      1795040260165997087,
-      "32e2695933160aca163d84328c64259d"
-    ],
-    "autonomous-ai-agents/hermes-peer-agents/SKILL.md": [
-      1795040260165785046,
-      37595,
-      10007998,
-      1795040260165785046,
-      "1abe07dff113dd46d73ab9d69b01ca5a"
-    ],
-    "autonomous-ai-agents/claude-code/SKILL.md": [
-      1795040260165051929,
-      35959,
-      10007748,
-      1795040260165051929,
-      "b5aa6bdb8484fcc04cee3beb4c63bc70"
-    ],
-    "autonomous-ai-agents/computer-use/SKILL.md": [
-      1795040260165140124,
-      17989,
-      10007750,
-      1795040260165140124,
-      "a2e6fb37f6a6ef3c0dd7e1ffc2a91c53"
-    ],
-    "software-development/simplify-code/SKILL.md": [
-      1795040260176352998,
-      14696,
-      10007680,
-      1795040260176352998,
-      "94643c4d8790029954eaa73f84dea1fa"
-    ],
-    "software-development/inspecting-hermes-desktop-dom/SKILL.md": [
-      1795040260176176310,
-      6250,
-      10008118,
-      1795040260176176310,
-      "5d41e96e9bbc7ffcbeea2677509011e4"
-    ],
-    "software-development/test-driven-development/SKILL.md": [
-      1795040260176520075,
-      10300,
-      10007682,
-      1795040260176520075,
-      "c1aceeec8301d9ee8ed3eec57f42e6cd"
-    ],
-    "software-development/requesting-code-review/SKILL.md": [
-      1795040260176314067,
-      8781,
-      10007684,
-      1795040260176314067,
-      "76d40be267e82dc1257114a5de3eedab"
-    ],
-    "software-development/dogfood/SKILL.md": [
-      1795040260175306890,
-      8652,
-      10007686,
-      1795040260175306890,
-      "66ded2c63a171e681f3a3d269b62d36a"
-    ],
-    "software-development/codebase-inspection/SKILL.md": [
-      1795040260175279701,
-      3612,
-      10007692,
-      1795040260175279701,
-      "a9a23052862d1954b5231ad8c21a664f"
-    ],
-    "software-development/systematic-debugging/SKILL.md": [
-      1795040260176473120,
-      14059,
-      10007694,
-      1795040260176473120,
-      "be298aab5cce9739a14765d1d3dc4f9d"
-    ],
-    "software-development/laravel-livewire/SKILL.md": [
-      1795040260176204440,
-      19369,
-      10008120,
-      1795040260176204440,
-      "4e85dabb0a69ae5411145989a5d31524"
-    ],
-    "software-development/git-branch-resync/SKILL.md": [
-      1795040260175397028,
-      8213,
-      10008110,
-      1795040260175397028,
-      "aac1e5c85072f4d6cd9bddcfa021a339"
-    ],
-    "software-development/spike/SKILL.md": [
-      1795040260176400026,
-      8723,
-      10007696,
-      1795040260176400026,
-      "5d62c1005889b74c72d0da32953d74f3"
-    ],
-    "software-development/improve-workflows/SKILL.md": [
-      1795040260176152919,
-      3932,
-      10008116,
-      1795040260176152919,
-      "c62f998232c9333f216eb59270be994c"
-    ],
-    "software-development/node-inspect-debugger/SKILL.md": [
-      1795040260176261223,
-      11065,
-      10008124,
-      1795040260176261223,
-      "08428801ec1476ec8ccecb55ca209197"
-    ],
-    "software-development/hermes-agent-skill-authoring/SKILL.md": [
-      1795040260176119439,
-      14537,
-      10008114,
-      1795040260176119439,
-      "e36090198a6704c98d3e1b2c8eee6081"
-    ],
-    "software-development/github/SKILL.md": [
-      1795040260175493703,
-      2446,
-      10007698,
-      1795040260175493703,
-      "0369eea527f7241672f33a41b68a2351"
-    ],
-    "software-development/python-debugpy/SKILL.md": [
-      1795040260176286344,
-      14984,
-      10008126,
-      1795040260176286344,
-      "cb2a25a71ae58c1255e55257bfd92f44"
-    ],
-    "devops/sdlc-review/SKILL.md": [
-      1795040260170948083,
-      9073,
-      10007677,
-      1795040260170948083,
-      "4f6bbdf50453f1211664da81faa23dad"
-    ],
-    "productivity/DESCRIPTION.md": [
-      1795040260171535504,
-      114,
-      10007946,
-      1795040260171535504,
-      "7caf452e2390224547d187f56a51dfcd"
-    ],
-    "productivity/weekly-review-planning/SKILL.md": [
-      1795040260174573588,
-      3955,
-      10007592,
-      1795040260174573588,
-      "430e548f8f95bd83f3366fcfe2708452"
-    ],
-    "productivity/collective-wisdom-install/SKILL.md": [
-      1795040260171765499,
-      7210,
-      10008052,
-      1795040260171765499,
-      "ad58e7e99724e2380f70e3e5ae0f6fa5"
-    ],
-    "productivity/teams-meeting-pipeline/SKILL.md": [
-      1795040260174543741,
-      7206,
-      10007594,
-      1795040260174543741,
-      "3a8da914d46d7429ab9637140f2fb323"
-    ],
-    "productivity/pdf/SKILL.md": [
-      1795040260173736604,
-      15308,
-      10007596,
-      1795040260173736604,
-      "1e050a7169a74ce6e5b4ffa56ced11d4"
-    ],
-    "productivity/document-to-action-items/SKILL.md": [
-      1795040260171789769,
-      3913,
-      10007621,
-      1795040260171789769,
-      "aed140e0f3db49b334eb4361d18fab3e"
-    ],
-    "productivity/product-price-monitor/SKILL.md": [
-      1795040260174514937,
-      4396,
-      10007623,
-      1795040260174514937,
-      "8ff58e988ddcd1e4396f57f0448ef197"
-    ],
-    "productivity/notion/SKILL.md": [
-      1795040260173647312,
-      14621,
-      10008070,
-      1795040260173647312,
-      "1fbd74ca16f4e8b76783a47ba5f80110"
-    ],
-    "productivity/airtable/SKILL.md": [
-      1795040260171569854,
-      11314,
-      10008037,
-      1795040260171569854,
-      "c754f016fc5e5d8a98b15db8474086ae"
-    ],
-    "productivity/maps/SKILL.md": [
-      1795040260172285738,
-      6705,
-      10007625,
-      1795040260172285738,
-      "065b86a0d3845d380f500f6795825b2a"
-    ],
-    "productivity/box/SKILL.md": [
-      1795040260171602000,
-      11697,
-      10008039,
-      1795040260171602000,
-      "fbbb4fd55c5f733d3eb8505bab916754"
-    ],
-    "productivity/powerpoint/SKILL.md": [
-      1795040260174364712,
-      10781,
-      10008075,
-      1795040260174364712,
-      "c8dd7ea299dc1566094a83ba83834d27"
-    ],
-    "productivity/google-workspace/SKILL.md": [
-      1795040260172050997,
-      14241,
-      10007629,
-      1795040260172050997,
-      "32ece0e05f6ed76b19783ec8b3f91925"
-    ],
-    "productivity/xlsx/SKILL.md": [
-      1795040260174619748,
-      9655,
-      10008086,
-      1795040260174619748,
-      "51fdfc85876e59d09fa1b3fde66fc724"
-    ],
-    "productivity/docx/SKILL.md": [
-      1795040260171834548,
-      10395,
-      10008055,
-      1795040260171834548,
-      "2ebaab2a653bcbfab9baf472d6ae5417"
-    ],
-    "productivity/microsoft-office/SKILL.md": [
-      1795040260172412705,
-      8073,
-      10007640,
-      1795040260172412705,
-      "9bccd32cd61dd982fd13700f71b1cd4e"
-    ],
-    "productivity/meeting-action-items/SKILL.md": [
-      1795040260172365462,
-      3798,
-      10007674,
-      1795040260172365462,
-      "51406f94bc25b9f4255b1c08612236b2"
-    ],
-    "web/DESCRIPTION.md": [
-      1795040260176564405,
-      137,
-      10007947,
-      1795040260176564405,
-      "69c9c9f9aef6a0719d0d71082120a8b1"
-    ],
-    "web/blocked-page-recovery/SKILL.md": [
-      1795040260176609736,
-      5175,
-      10007587,
-      1795040260176609736,
-      "5cf72239b3e644d7e83ee973b3694609"
-    ],
-    "apple/DESCRIPTION.md": [
-      1795040260164870079,
-      137,
-      10007948,
-      1795040260164870079,
-      "a0c16363f096c201d06a67ab424b3d9d"
-    ],
-    "apple/imessage/SKILL.md": [
-      1795040260164987831,
-      2442,
-      10007578,
-      1795040260164987831,
-      "7809fd098a78a6588535bb57cafb5d73"
-    ],
-    "apple/apple-reminders/SKILL.md": [
-      1795040260164932792,
-      3606,
-      10007580,
-      1795040260164932792,
-      "6bf59594bfe7e4224d4136404a78f6de"
-    ],
-    "apple/apple-notes/SKILL.md": [
-      1795040260164904090,
-      2394,
-      10007582,
-      1795040260164904090,
-      "3a5d206019095e0b633a53f575526401"
-    ],
-    "apple/findmy/SKILL.md": [
-      1795040260164960258,
-      3823,
-      10007584,
-      1795040260164960258,
-      "bee95f1a66807ae46c23be3bffc485d8"
-    ],
     "note-taking/DESCRIPTION.md": [
-      1795040260171473808,
+      1795084909549130396,
       146,
-      10007949,
-      1795040260171473808,
+      10007952,
+      1795084909549130396,
       "da7083e903d53abdf96d06c456959494"
     ],
     "note-taking/obsidian/SKILL.md": [
-      1795040260171500384,
+      1795084909549159224,
       3092,
-      10007575,
-      1795040260171500384,
+      10007951,
+      1795084909549159224,
       "90dd7d5e33ddd6746fdb973b21e6485e"
     ],
-    "media/DESCRIPTION.md": [
-      1795040260171281278,
-      139,
-      10007950,
-      1795040260171281278,
-      "b81c64a758bcccdc7efb83ba5e48d779"
+    "git-workflow/SKILL.md": [
+      1795084909548751065,
+      3498,
+      10008062,
+      1795084909548751065,
+      "6637b23db3e237dd4385953e933ccb2c"
     ],
-    "media/songsee/SKILL.md": [
-      1795040260171345463,
-      2336,
-      10008035,
-      1795040260171345463,
-      "410a4e500131c60b73edcfeed125cfa3"
+    "productivity/DESCRIPTION.md": [
+      1795084909549195964,
+      114,
+      10007953,
+      1795084909549195964,
+      "7caf452e2390224547d187f56a51dfcd"
     ],
-    "media/youtube-content/SKILL.md": [
-      1795040260171368654,
-      4377,
-      10007505,
-      1795040260171368654,
-      "4ef8e7097f3f8066e17337cb83dcd078"
+    "productivity/google-workspace/SKILL.md": [
+      1795084909549859997,
+      14241,
+      10007875,
+      1795084909549859997,
+      "32ece0e05f6ed76b19783ec8b3f91925"
     ],
-    "media/gif-search/SKILL.md": [
-      1795040260171315684,
-      2720,
+    "productivity/teams-meeting-pipeline/SKILL.md": [
+      1795084909552211762,
+      7206,
+      10007877,
+      1795084909552211762,
+      "3a8da914d46d7429ab9637140f2fb323"
+    ],
+    "productivity/collective-wisdom-install/SKILL.md": [
+      1795084909549500191,
+      7210,
+      10008087,
+      1795084909549500191,
+      "ad58e7e99724e2380f70e3e5ae0f6fa5"
+    ],
+    "productivity/weekly-review-planning/SKILL.md": [
+      1795084909552244829,
+      3955,
+      10007879,
+      1795084909552244829,
+      "430e548f8f95bd83f3366fcfe2708452"
+    ],
+    "productivity/powerpoint/SKILL.md": [
+      1795084909551998159,
+      10781,
+      10008110,
+      1795084909551998159,
+      "c8dd7ea299dc1566094a83ba83834d27"
+    ],
+    "productivity/document-to-action-items/SKILL.md": [
+      1795084909549530280,
+      3913,
+      10007881,
+      1795084909549530280,
+      "aed140e0f3db49b334eb4361d18fab3e"
+    ],
+    "productivity/microsoft-office/SKILL.md": [
+      1795084909550280268,
+      8073,
+      10007910,
+      1795084909550280268,
+      "9bccd32cd61dd982fd13700f71b1cd4e"
+    ],
+    "productivity/pdf/SKILL.md": [
+      1795084909551395663,
+      15308,
+      10007937,
+      1795084909551395663,
+      "1e050a7169a74ce6e5b4ffa56ced11d4"
+    ],
+    "productivity/docx/SKILL.md": [
+      1795084909549601886,
+      10395,
+      10008090,
+      1795084909549601886,
+      "2ebaab2a653bcbfab9baf472d6ae5417"
+    ],
+    "productivity/box/SKILL.md": [
+      1795084909549274370,
+      11697,
+      10008074,
+      1795084909549274370,
+      "fbbb4fd55c5f733d3eb8505bab916754"
+    ],
+    "productivity/notion/SKILL.md": [
+      1795084909551299114,
+      14621,
+      10008105,
+      1795084909551299114,
+      "1fbd74ca16f4e8b76783a47ba5f80110"
+    ],
+    "productivity/airtable/SKILL.md": [
+      1795084909549237898,
+      11314,
+      10008072,
+      1795084909549237898,
+      "c754f016fc5e5d8a98b15db8474086ae"
+    ],
+    "productivity/maps/SKILL.md": [
+      1795084909550146280,
+      6705,
+      10007944,
+      1795084909550146280,
+      "065b86a0d3845d380f500f6795825b2a"
+    ],
+    "productivity/product-price-monitor/SKILL.md": [
+      1795084909552175279,
+      4396,
+      10007946,
+      1795084909552175279,
+      "8ff58e988ddcd1e4396f57f0448ef197"
+    ],
+    "productivity/xlsx/SKILL.md": [
+      1795084909552303704,
+      9655,
+      10008121,
+      1795084909552303704,
+      "51fdfc85876e59d09fa1b3fde66fc724"
+    ],
+    "productivity/meeting-action-items/SKILL.md": [
+      1795084909550227920,
+      3798,
+      10007948,
+      1795084909550227920,
+      "51406f94bc25b9f4255b1c08612236b2"
+    ],
+    "autonomous-ai-agents/DESCRIPTION.md": [
+      1795084909541349313,
+      211,
+      10007954,
+      1795084909541349313,
+      "c60a15744ecd672feb6fcce626191da4"
+    ],
+    "autonomous-ai-agents/opencode/SKILL.md": [
+      1795084909542618571,
+      7297,
+      10008048,
+      1795084909542618571,
+      "32e2695933160aca163d84328c64259d"
+    ],
+    "autonomous-ai-agents/hermes-agent/SKILL.md": [
+      1795084909541504172,
+      13237,
+      10007853,
+      1795084909541504172,
+      "5e93695399fcb529dc8c9c816c76bc52"
+    ],
+    "autonomous-ai-agents/codex/SKILL.md": [
+      1795084909541429978,
+      5852,
+      10007859,
+      1795084909541429978,
+      "6616d33f09f2291ed866a74c51684074"
+    ],
+    "autonomous-ai-agents/hermes-plugin-install/SKILL.md": [
+      1795084909542553909,
+      3745,
+      10008044,
+      1795084909542553909,
+      "4fae3c41c6a68d338df6ec517246ab91"
+    ],
+    "autonomous-ai-agents/claude-code/SKILL.md": [
+      1795084909541384762,
+      35959,
+      10007861,
+      1795084909541384762,
+      "b5aa6bdb8484fcc04cee3beb4c63bc70"
+    ],
+    "autonomous-ai-agents/computer-use/SKILL.md": [
+      1795084909541463960,
+      17989,
+      10007863,
+      1795084909541463960,
+      "a2e6fb37f6a6ef3c0dd7e1ffc2a91c53"
+    ],
+    "autonomous-ai-agents/hermes-peer-agents/SKILL.md": [
+      1795084909542345474,
+      37595,
       10008033,
-      1795040260171315684,
-      "cdb8d2856d53767e12e64c0ab32f3d3b"
+      1795084909542345474,
+      "1abe07dff113dd46d73ab9d69b01ca5a"
     ],
-    "fix-verification/SKILL.md": [
-      1795040260171141763,
-      7633,
-      10008022,
-      1795040260171141763,
-      "0702f2de6ffc5f47d2d75d605563a469"
+    "creative/DESCRIPTION.md": [
+      1795084909542704479,
+      116,
+      10007955,
+      1795084909542704479,
+      "46e64cc16943251684fdc5126fddf033"
+    ],
+    "creative/architecture-diagram/SKILL.md": [
+      1795084909542742577,
+      5830,
+      10007660,
+      1795084909542742577,
+      "580c2fe8a1e76857dff79af21b466e62"
+    ],
+    "creative/ascii-video/SKILL.md": [
+      1795084909542853370,
+      15011,
+      10007673,
+      1795084909542853370,
+      "cb017f3ca2f771147a41430c5721560c"
+    ],
+    "creative/humanizer/SKILL.md": [
+      1795084909544679787,
+      34463,
+      10007676,
+      1795084909544679787,
+      "d9f8905ea5969ba66305cda0dfa1f87c"
+    ],
+    "creative/baoyu-infographic/SKILL.md": [
+      1795084909543294898,
+      10490,
+      10007727,
+      1795084909543294898,
+      "6da76db092943a156bcc61dd854383e1"
+    ],
+    "creative/manim-video/SKILL.md": [
+      1795084909544747392,
+      12150,
+      10007747,
+      1795084909544747392,
+      "f2af4a334697dc8c74da4c1ea14adb62"
+    ],
+    "creative/songwriting-and-ai-music/SKILL.md": [
+      1795084909548242424,
+      10963,
+      10007750,
+      1795084909548242424,
+      "01af829788c9bb87b71544d2ff3411e5"
+    ],
+    "creative/p5js/SKILL.md": [
+      1795084909545494205,
+      27534,
+      10007768,
+      1795084909545494205,
+      "9fbb0f962c7608d35a14ffab5f067644"
+    ],
+    "creative/design-md/SKILL.md": [
+      1795084909544579444,
+      8477,
+      10008053,
+      1795084909544579444,
+      "4366ec3fda3c6f18daf5afdd6aae1fc2"
+    ],
+    "creative/claude-design/SKILL.md": [
+      1795084909544515498,
+      25204,
+      10007773,
+      1795084909544515498,
+      "1352559bea8ac5b0623da83df41742b3"
+    ],
+    "creative/popular-web-designs/SKILL.md": [
+      1795084909546098472,
+      9869,
+      10007775,
+      1795084909546098472,
+      "d1273c5836c9c6becaddab897b514fe9"
+    ],
+    "research/DESCRIPTION.md": [
+      1795084909552546613,
+      179,
+      10007956,
+      1795084909552546613,
+      "e7c50d312d69f35ac7fae94423f1974d"
+    ],
+    "research/grounded-citations/SKILL.md": [
+      1795084909552693693,
+      12644,
+      10007651,
+      1795084909552693693,
+      "03a41bc3b06db1139382ebc259282f19"
+    ],
+    "research/rss-feeds/SKILL.md": [
+      1795084909552938446,
+      4557,
+      10008137,
+      1795084909552938446,
+      "8ea9f76170b400a8aadc5ec7f5196c1a"
+    ],
+    "research/llm-wiki/SKILL.md": [
+      1795084909552867577,
+      20121,
+      10008135,
+      1795084909552867577,
+      "5a7972a255b4e17a9e775eabdf3c0a68"
+    ],
+    "research/arxiv/SKILL.md": [
+      1795084909552582580,
+      10061,
+      10007655,
+      1795084909552582580,
+      "a007079c25d720cc360aa3bcb64c5f71"
+    ],
+    "research/competitor-news-monitor/SKILL.md": [
+      1795084909552656623,
+      4619,
+      10007657,
+      1795084909552656623,
+      "81445419176c38884a6f948b0a899940"
+    ],
+    "devops/sdlc-review/SKILL.md": [
+      1795084909548283079,
+      9073,
+      10007642,
+      1795084909548283079,
+      "4f6bbdf50453f1211664da81faa23dad"
     ],
     "communication/respecting-format-requests/SKILL.md": [
-      1795040260166044270,
+      1795084909542676723,
       2801,
-      10008016,
-      1795040260166044270,
+      10008051,
+      1795084909542676723,
       "aa60603c9049d55f2b6b98f02d9b1be3"
     ],
+    "media/DESCRIPTION.md": [
+      1795084909548909049,
+      139,
+      10007957,
+      1795084909548909049,
+      "b81c64a758bcccdc7efb83ba5e48d779"
+    ],
+    "media/youtube-content/SKILL.md": [
+      1795084909549026575,
+      4377,
+      10007639,
+      1795084909549026575,
+      "4ef8e7097f3f8066e17337cb83dcd078"
+    ],
+    "media/songsee/SKILL.md": [
+      1795084909548995895,
+      2336,
+      10008070,
+      1795084909548995895,
+      "410a4e500131c60b73edcfeed125cfa3"
+    ],
+    "media/gif-search/SKILL.md": [
+      1795084909548962231,
+      2720,
+      10008068,
+      1795084909548962231,
+      "cdb8d2856d53767e12e64c0ab32f3d3b"
+    ],
+    "software-development/laravel-livewire/SKILL.md": [
+      1795084909554019200,
+      19369,
+      10008155,
+      1795084909554019200,
+      "4e85dabb0a69ae5411145989a5d31524"
+    ],
+    "software-development/improve-workflows/SKILL.md": [
+      1795084909553948366,
+      3932,
+      10008151,
+      1795084909553948366,
+      "c62f998232c9333f216eb59270be994c"
+    ],
+    "software-development/hermes-agent-skill-authoring/SKILL.md": [
+      1795084909553902850,
+      14537,
+      10008149,
+      1795084909553902850,
+      "e36090198a6704c98d3e1b2c8eee6081"
+    ],
+    "software-development/node-inspect-debugger/SKILL.md": [
+      1795084909554091657,
+      11065,
+      10008159,
+      1795084909554091657,
+      "08428801ec1476ec8ccecb55ca209197"
+    ],
+    "software-development/git-branch-resync/SKILL.md": [
+      1795084909553317677,
+      8213,
+      10008145,
+      1795084909553317677,
+      "aac1e5c85072f4d6cd9bddcfa021a339"
+    ],
+    "software-development/inspecting-hermes-desktop-dom/SKILL.md": [
+      1795084909553983770,
+      6250,
+      10008153,
+      1795084909553983770,
+      "5d41e96e9bbc7ffcbeea2677509011e4"
+    ],
+    "software-development/dogfood/SKILL.md": [
+      1795084909553211693,
+      8652,
+      10007597,
+      1795084909553211693,
+      "66ded2c63a171e681f3a3d269b62d36a"
+    ],
+    "software-development/test-driven-development/SKILL.md": [
+      1795084909554326550,
+      10300,
+      10007601,
+      1795084909554326550,
+      "c1aceeec8301d9ee8ed3eec57f42e6cd"
+    ],
+    "software-development/systematic-debugging/SKILL.md": [
+      1795084909554287825,
+      14059,
+      10007603,
+      1795084909554287825,
+      "be298aab5cce9739a14765d1d3dc4f9d"
+    ],
+    "software-development/simplify-code/SKILL.md": [
+      1795084909554210971,
+      14696,
+      10007605,
+      1795084909554210971,
+      "94643c4d8790029954eaa73f84dea1fa"
+    ],
+    "software-development/python-debugpy/SKILL.md": [
+      1795084909554133749,
+      14984,
+      10008161,
+      1795084909554133749,
+      "cb2a25a71ae58c1255e55257bfd92f44"
+    ],
+    "software-development/spike/SKILL.md": [
+      1795084909554251057,
+      8723,
+      10007607,
+      1795084909554251057,
+      "5d62c1005889b74c72d0da32953d74f3"
+    ],
+    "software-development/github/SKILL.md": [
+      1795084909553397030,
+      2446,
+      10007623,
+      1795084909553397030,
+      "0369eea527f7241672f33a41b68a2351"
+    ],
+    "software-development/requesting-code-review/SKILL.md": [
+      1795084909554168518,
+      8781,
+      10007630,
+      1795084909554168518,
+      "76d40be267e82dc1257114a5de3eedab"
+    ],
+    "software-development/codebase-inspection/SKILL.md": [
+      1795084909553176367,
+      3612,
+      10007632,
+      1795084909553176367,
+      "a9a23052862d1954b5231ad8c21a664f"
+    ],
+    "apple/DESCRIPTION.md": [
+      1795084909541178670,
+      137,
+      10007958,
+      1795084909541178670,
+      "a0c16363f096c201d06a67ab424b3d9d"
+    ],
+    "apple/imessage/SKILL.md": [
+      1795084909541316097,
+      2442,
+      10007586,
+      1795084909541316097,
+      "7809fd098a78a6588535bb57cafb5d73"
+    ],
+    "apple/apple-reminders/SKILL.md": [
+      1795084909541256130,
+      3606,
+      10007588,
+      1795084909541256130,
+      "6bf59594bfe7e4224d4136404a78f6de"
+    ],
+    "apple/apple-notes/SKILL.md": [
+      1795084909541225273,
+      2394,
+      10007590,
+      1795084909541225273,
+      "3a5d206019095e0b633a53f575526401"
+    ],
+    "apple/findmy/SKILL.md": [
+      1795084909541285524,
+      3823,
+      10007592,
+      1795084909541285524,
+      "bee95f1a66807ae46c23be3bffc485d8"
+    ],
+    "social-media/DESCRIPTION.md": [
+      1795084909553005545,
+      151,
+      10007959,
+      1795084909553005545,
+      "d54f750ff827117e4b40c9f76d64fb00"
+    ],
+    "social-media/xurl/SKILL.md": [
+      1795084909553123641,
+      16345,
+      10007583,
+      1795084909553123641,
+      "2312530a9deef9748cec23b384f47f59"
+    ],
+    "social-media/reddit-reading/SKILL.md": [
+      1795084909553050401,
+      6279,
+      10008141,
+      1795084909553050401,
+      "193e12a0f69fbcd9fab23cb125383233"
+    ],
+    "web/DESCRIPTION.md": [
+      1795084909554360556,
+      137,
+      10007960,
+      1795084909554360556,
+      "69c9c9f9aef6a0719d0d71082120a8b1"
+    ],
+    "web/blocked-page-recovery/SKILL.md": [
+      1795084909554391104,
+      5175,
+      10007580,
+      1795084909554391104,
+      "5cf72239b3e644d7e83ee973b3694609"
+    ],
     "email/DESCRIPTION.md": [
-      1795040260170979908,
+      1795084909548316924,
       101,
-      10007951,
-      1795040260170979908,
+      10007961,
+      1795084909548316924,
       "4be60e6df2eb4b9cba8ddad557e41057"
     ],
+    "email/himalaya/SKILL.md": [
+      1795084909548379720,
+      7272,
+      10007510,
+      1795084909548379720,
+      "5bc714c5717f302f73c013e7cf77ce44"
+    ],
     "email/email-inbox-triage/SKILL.md": [
-      1795040260171009280,
+      1795084909548346214,
       5447,
-      10007497,
-      1795040260171009280,
+      10007512,
+      1795084909548346214,
       "b286da3f85c70cefde0c16ba5ae5d2d4"
     ],
-    "email/himalaya/SKILL.md": [
-      1795040260171040074,
-      7272,
-      10007499,
-      1795040260171040074,
-      "5bc714c5717f302f73c013e7cf77ce44"
+    "fix-verification/SKILL.md": [
+      1795084909548653162,
+      7633,
+      10008057,
+      1795084909548653162,
+      "0702f2de6ffc5f47d2d75d605563a469"
     ]
   },
   "skills": [
