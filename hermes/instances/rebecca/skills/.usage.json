@@ -110,7 +110,7 @@
     "view_count": 33
   },
   "github-discussions": {
-    "archived_at": null,
+    "archived_at": "2026-11-19T04:42:25.566081+00:00",
     "created_at": "2026-09-28T17:54:16.539540+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -121,7 +121,7 @@
     "patch_count": 18,
     "patch_generation": 18,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 11,
     "view_count": 11
   },
@@ -132,14 +132,14 @@
     "first_seen_at": null,
     "last_patched_at": "2026-11-12T21:36:01.985351+00:00",
     "last_reused_patch_generation": 17,
-    "last_used_at": "2026-11-18T03:50:53.766816+00:00",
-    "last_viewed_at": "2026-11-18T03:50:53.766002+00:00",
+    "last_used_at": "2026-11-19T00:43:31.860357+00:00",
+    "last_viewed_at": "2026-11-19T00:43:31.859399+00:00",
     "patch_count": 17,
     "patch_generation": 17,
     "pinned": false,
     "state": "active",
-    "use_count": 55,
-    "view_count": 55
+    "use_count": 56,
+    "view_count": 56
   },
   "hermes-agent": {
     "archived_at": null,
@@ -203,7 +203,7 @@
     "view_count": 13
   },
   "improve-workflows": {
-    "archived_at": null,
+    "archived_at": "2026-11-19T04:42:25.601506+00:00",
     "created_at": "2026-09-21T22:12:32.618963+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -214,7 +214,7 @@
     "patch_count": 1,
     "patch_generation": 1,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 2,
     "view_count": 2
   },
