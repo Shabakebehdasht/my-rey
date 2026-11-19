@@ -63,7 +63,7 @@
     "view_count": 5
   },
   "fix-verification": {
-    "archived_at": null,
+    "archived_at": "2026-11-18T23:17:16.831816+00:00",
     "created_at": "2026-09-30T15:44:26.608811+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -74,12 +74,12 @@
     "patch_count": 9,
     "patch_generation": 9,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 6,
     "view_count": 6
   },
   "git-branch-resync": {
-    "archived_at": null,
+    "archived_at": "2026-11-18T23:17:16.866701+00:00",
     "created_at": "2026-10-05T16:38:42.645420+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -90,12 +90,12 @@
     "patch_count": 9,
     "patch_generation": 9,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 7,
     "view_count": 7
   },
   "git-workflow": {
-    "archived_at": null,
+    "archived_at": "2026-11-18T23:17:16.891316+00:00",
     "created_at": "2026-09-21T18:58:10.077603+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -106,7 +106,7 @@
     "patch_count": 2,
     "patch_generation": 2,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 15,
     "view_count": 15
   },
@@ -219,7 +219,7 @@
     "view_count": 0
   },
   "laravel-livewire": {
-    "archived_at": null,
+    "archived_at": "2026-11-18T23:17:16.926326+00:00",
     "created_at": "2026-09-22T10:32:33.309155+00:00",
     "created_by": "agent",
     "first_seen_at": null,
@@ -230,7 +230,7 @@
     "patch_count": 22,
     "patch_generation": 22,
     "pinned": false,
-    "state": "stale",
+    "state": "archived",
     "use_count": 23,
     "view_count": 23
   },

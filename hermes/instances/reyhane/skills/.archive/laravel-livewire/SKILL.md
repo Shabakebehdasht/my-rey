@@ -1,0 +1,316 @@
+---
+name: laravel-livewire
+description: "Laravel 13 + Livewire 4 conventions, pitfalls, testing."
+version: 1.0.0
+author: Hermes Agent
+license: MIT
+metadata:
+  hermes:
+    tags: [laravel, livewire, php, pest, testing]
+    category: software-development
+---
+
+# Laravel 13 + Livewire 4 Development
+
+## When to Use
+
+Use this skill when writing PHP/Laravel code, Livewire components, Pest tests,
+API Resource transformers, or E2E tests for a Laravel 13 + Livewire 4 project.
+
+Standing conventions and pitfalls for Laravel/Livewire projects. Applies to
+PHP code changes, test writing, and API resource transformers.
+
+## Always-On Rules
+
+1. **Run Pint before commit.** `vendor/bin/pint --dirty` is enforced in CI.
+   If the wrapper is refused by a command-lifecycle guard (it reports the
+   script is larger than the scan cap), invoke the same binary directly:
+   `php vendor/laravel/pint/builds/pint --dirty --format agent`. Same tool, same
+   result — don't skip the formatter because the shim was blocked.
+2. **Clear config+route cache before running tests.** Stale `routes-v7.php`
+   causes Livewire endpoint-hash mismatch — tests silently return 404 on
+   `->set()`/`->call()`.
+3. **Use `assertDatabaseHas` with all relevant fields.** Don't just assert on
+   `title` — include `user_id`, `unit_id`, or any field the code was supposed
+   to set. Partial assertions miss bugs.
+4. **Test Resource transformers directly.** Don't rely solely on controller
+   tests to cover API response shape — instantiate the Resource class and
+   call `toArray(new Request())` to assert exact field contracts.
+5. **E2E tests go in `tests/e2e/<feature>/`** with `.spec.ts` extension.
+   Import from `../shared/fixtures` for `login`, `waitForLivewire`, etc.
+6. **Regenerate PHPStan baseline after fixing errors.** When you fix errors
+   that exist in `phpstan-baseline.neon`, the old entries become unmatched
+   and PHPStan reports new errors. Run `vendor/bin/phpstan analyse
+   --generate-baseline` after every fix round, then verify with
+   `composer phpstan`. The baseline is **line-based**, so inserting or deleting
+   lines above an existing baseline entry shifts it and produces both
+   `ignore.unmatched` (non-ignorable) and duplicate errors. After regenerating,
+   diff entry counts and state the direction: fewer entries is fine, any
+   increase means real new errors. Entries that merely changed line number are
+   not new debt — say which count dropped and why.
+7. **A nullable column needs a nullable PHPDoc.** `@property int $unit_id` on a
+   nullable column makes every `=== null` branch statically dead, and PHPStan
+   reports the check as always-false — i.e. it flags legitimate org-wide /
+   no-owner logic as unreachable and you would "fix" the error by deleting the
+   branch that implements the feature. Check the migration before writing the
+   PHPDoc, not after PHPStan complains.
+
+## Pitfalls
+
+- **Unit search dropdowns must scope to accessible units.** Any Livewire component
+  with a unit search/typeahead (`Unit::where('name', 'like', ...)`) that feeds
+  a dropdown must add `->whereIn('id', app(AccessService::class)->accessibleUnitIds())`
+  to the query. An unscoped unit picker lets any authenticated user enumerate
+  all ticket-receiving units in the organization (scope leak). The pattern is
+  an **unconditional `whereIn`** — never `when($ids, …)` or `!empty($ids)`,
+  which silently drop the predicate on an empty scope and return the whole org
+  (fail-open). Match the pattern already established in `⚡monitoring.blade.php`
+  and sweep all `resources/views/livewire/**` for unscoped unit pickers.
+
+- **CI regenerates `.env.testing` from `.env.example` and generates a fresh APP_KEY.**
+  Never commit `.env.testing` with a real `APP_KEY=base64:...` value — the
+  `AppKeyLeakGuardTest` will fail. If you generate a key locally for testing,
+  blank it (`APP_KEY=`) before committing. CI always runs:
+  `cp .env.example .env.testing && php artisan key:generate --env=testing`.
+
+- **Pint formatting changes line numbers → PHPStan baseline mismatch.** After running
+  Pint on modified files, the baseline entries in `phpstan-baseline.neon` shift
+  line numbers and become `ignore.unmatched`. Regenerate the baseline:
+  `vendor/bin/phpstan analyse --generate-baseline` and verify with `composer phpstan`.
+  Do NOT edit the baseline by hand to fix line numbers.
+
+- **Livewire test timing/debounce failures are often pre-existing, not caused by your fix.**
+  If a test uses `->set('search', '...')` without `->call('updatedSearch')` to
+  trigger the debounced handler, the component state won't update and assertions
+  on `$component->get('units')` return null. Check if the same test failed on
+  the default branch before assuming your change broke it. Stash your changes,
+  run the test on the default branch with the same seed to confirm.
+
+- **`assertSet('units', [])` asserts the *property value is an empty array*; if
+  the Livewire component initializes `$units = []` (correct) but the test's
+  `->set('search', 'x')` doesn't trigger `updatedSearch()`, the property stays
+  `[]` and the assertion passes — but the actual dropdown logic never ran.
+  Always call the updated* handler explicitly in tests: `->call('updatedSearch')`.
+
+- **`whenLoaded` returns `MissingValue`, not `null`.** When calling
+  `toArray()` directly on a JsonResource (not through `toResponse()`),
+  `whenLoaded('relation')` returns a `MissingValue` object. Tests must
+  check `instanceof` or use `array_key_exists` — `assertNull()` fails.
+- **Factory defaults ≠ nullable columns.** A migration with
+  `->default('o-bell')` on a NOT NULL column means the factory must NOT
+  pass `null` for that field. Use the default value, not `null`.
+- **Faker `passthrough()` requires an argument.** Use
+  `fake()->optional(0.6)->words(3)` or another generator for optional
+  JSON fields — `passthrough()` needs a value parameter.
+- **Carbon `toISOString()` ≠ ATOM format.** `toISOString()` returns
+  `.000000Z` suffix; ATOM uses timezone offset. Use `strtotime()` for
+  flexible ISO 8601 validation in tests.
+- **UUID primary key models + HasFactory.** Models with manual UUID
+  generation in `boot()` (via `Str::uuid()`) work with `HasFactory`.
+  Don't add `HasUuids` trait — it would conflict with the manual boot
+  logic.
+- **PHPStan `auth()->id()` vs `Auth::id()` in Livewire blade components.**
+  PHPStan types `auth()` as `Illuminate\Contracts\Auth\Factory` which
+  lacks `id()`. In anonymous-class Livewire blade components (single-file
+  components with `return new class extends Component`), add
+  `use Illuminate\Support\Facades\Auth;` and call `Auth::id()` instead.
+  `auth()->user()` works fine (returns User|null), but `auth()->id()`
+  does not.
+- **PHPStan generic type for HasFactory.** PHPStan level 6+ requires the
+  generic type annotation on `use HasFactory`. Write
+  `/** @use HasFactory<\Database\Factories\YourFactory> */` immediately
+  above the `use HasFactory;` statement. Without it, PHPStan reports
+  `missingType.generics`.
+- **PHPStan `@property-read` on JsonResource.** When a Resource class
+  accesses `$this->some_field` (magic proxied from the underlying model),
+  PHPStan reports `property.notFound`. Fix: add `@property-read` PHPDoc
+  annotations for every accessed field, then access via
+  `$model = $this->resource;` with a `@var Model $model` cast. Match
+  the pattern used by other Resources in the project (see
+  `NotificationResource.php` for the reference implementation).
+- **PHPStan without larastan degrades an Eloquent chain to `Query\Builder`
+  after `whereIn()`.** `Eloquent\Builder` declares `@mixin Query\Builder`, so
+  the first call PHPStan resolves through the mixin types the receiver as
+  `Query\Builder` and any later Eloquent-only call fails with
+  `Call to an undefined method Illuminate\Database\Query\Builder::with()/withCount()`.
+  **Fix (verified — clears the error with zero baseline entries): end every
+  chain on a call that `Eloquent\Builder` defines itself.** Put eager loads
+  first, then move the scope filters into a trailing closure —
+  `->where(function ($q) use ($ids) { $q->whereIn(...); })` — or filter by key
+  with `whereKey($ids)` instead of `whereIn('id', $ids)`. `where()` and
+  `whereKey()` are declared on the Eloquent builder with `@return $this`, so the
+  body returns an Eloquent builder and `return.type` disappears; callers already
+  honour the declared `@return Builder<Model>`. Do NOT reach for an inline
+  `@var`/`assert()` to override the inferred type — PHPStan rejects that
+  explicitly. Only a chain that must end on a mixin-only call
+  (`orderBy()`/`limit()` before `get()`) still reports; that residual goes into
+  the regenerated baseline (Always-On rule 6). The root fix is larastan, which
+  this project does not run.
+- **`updateOrCreate` overwrites ownership on edit.** When using
+  `Model::updateOrCreate(['id' => $editingId], [...])` and one field
+  (e.g. `user_id`, `created_by`) should only be set on create — not on
+  update — do NOT include it in the attributes array. The update path
+  would overwrite the original value. Instead, omit the field from
+  `updateOrCreate`, then conditionally set it after:
+  ```php
+  $model = Model::updateOrCreate(['id' => $editingId], [...]);
+  if (! $editingId) {
+      $model->update(['user_id' => Auth::id()]);
+  }
+  ```
+- **`Storage::fake()` takes one disk name, not an array.** `Storage::fake(['local','public'])`
+  throws `TypeError: getRootPath(): Argument #1 ($disk) must be of type string, array given`.
+  Call it once per disk: `Storage::fake('public'); Storage::fake('local');`. The error
+  surfaces as a `TypeError` inside the facade, which reads like a framework bug rather
+  than a bad argument.
+- **Assert the disk is empty, not only the status code.** For a route that writes a file,
+  pair the status assertion with `Storage::disk($d)->allFiles()` on every disk the
+  request could have chosen. A request that returns 404 can still have written something
+  earlier in a middleware chain.
+
+## Extracting a Reusable Nested Component
+
+When one single-file Livewire component holds two responsibilities, split it
+into a child component and a thin parent page:
+
+1. Move the mechanics **verbatim** into `resources/views/livewire/<ns>/<name>.blade.php`.
+   The child owns state and methods; the parent keeps access checks, detail
+   panels and page chrome (header, theme selector).
+2. Child → parent: `$this->dispatch('event', id: $id)` in the child,
+   `#[On('event')] public function handler(int $id)` on the parent. Dispatched
+   **named** arguments must match the listener's parameter names.
+3. Per-node render hooks: pass a Blade view name plus a data array down as
+   props and `@include($view, ['unit' => $unit, 'data' => $data])` in the node
+   partial. Never let the child query page-specific data per node — that is the
+   N+1 trap the extraction exists to remove.
+4. Retarget mechanics tests to the child; keep auth/panel/render tests on the
+   parent.
+
+Test contract after the split:
+- Parent `assertSee()` **does** include child-rendered HTML (children render
+  inline), so page-level render assertions keep working.
+- Parent `->get('prop')` / `->call('method')` do **not** reach the child — assert
+  child state with `Livewire::test('child', $props)` and drive the parent through
+  the event: `Livewire::test('parent')->dispatch('event', id: ...)`.
+- Cover both halves of the wiring: `->assertDispatched(...)` on the child proves
+  it fires, `->dispatch(...)` on the parent proves the listener runs. Asserting
+  only the parent's handler by direct `->call()` passes even when the event is
+  never dispatched.
+- Batch level-wise loads (`whereIn('parent_id', $ids)`) rather than one query
+  per node, and pin the result with a measured query-count assertion so the N+1
+  cannot come back.
+
+## Merge Conflicts in Auto-Generated Files
+
+When a PR has merge conflicts with `upstream/beta` in auto-generated files
+(like `phpstan-baseline.neon`), do NOT manually merge the conflict markers.
+These files are machine-generated — manual merge produces invalid output.
+
+**Procedure:**
+1. `git fetch upstream beta && git merge upstream/beta`
+2. For the conflicted auto-generated file: `git checkout --theirs <file>`
+   (take upstream's version as starting point)
+3. `git add <file>`
+4. Regenerate from scratch: `vendor/bin/phpstan analyse --no-progress --generate-baseline`
+5. Verify: `composer phpstan`
+6. `git add <file> && git commit --no-edit`
+7. `git push origin <branch>`
+
+**Never** edit phpstan-baseline.neon by hand to resolve conflicts.
+The regenerate step produces the correct baseline for the current code state.
+
+## Merge Conflicts in Hand-Written Files
+
+The inverse case — two contributors each appending to the same hand-maintained
+file, which is exactly what a shared doc table or a common service provider
+produces. Resolve by **keeping both sides**, not by picking a winner:
+
+1. Read the conflicted region and classify it. Two contributors each adding an
+   import line or a table row is an *additive* conflict: concatenate both,
+   keeping the file's existing ordering convention.
+2. After resolving, verify each side actually survived — `grep -c` every
+   symbol both sides contributed. Cleaning up markers proves nothing; a
+   dropped `use` line or a deleted doc row is silent until something breaks.
+3. Re-run the full quality gates on the merged tree. The merge brought in
+   other people's changes, so a passing suite from before the merge says
+   nothing about the tree you are now committing.
+
+Never resolve by `git checkout --ours` or `--theirs` on a hand-written file
+just because the conflict looks small — that silently discards a
+contributor's change, and for a shared provider or doc file the loss is not
+visible in your diff at all.
+
+## Organisational scope on a Livewire page (multi-tenant read + write)
+
+When a page gates only a coarse permission (`manage_hardware`, `manage_personnel`)
+but neighbouring pages in the same route group scope every path through
+`AccessService::accessibleUnitIds()`, the page leaks cross-unit rows. Fix all
+four surfaces, not just the list:
+
+- **List** — an *unconditional* predicate: `where(function ($q) { $q->whereNull('unit_id'); if (!empty($ids)) { $q->orWhereIn('unit_id', $ids); } })`.
+  Never `when($ids, …)`: an empty scope silently drops the predicate and returns
+  the whole org (the fail-open trap). Decide explicitly whether null-owner rows
+  (org-wide) are visible; say so in the PR.
+- **Options/pickers** — filter the option list to in-scope ids too. A picker
+  that offers every unit lets the user submit an id the list would never show.
+- **Mutators** — resolve the record, then assert it is in scope before touching
+  state. Route-model binding gives you the record, not permission to change it;
+  `$editingId` from the client is attacker-controlled.
+- **Submitted foreign keys** — a create/update that accepts `unit_id` must
+  validate the *submitted* value against scope, not only the loaded record.
+  Otherwise an edit can relocate a row across the boundary, which also
+  redirects any cron/queued side effect that fires on that foreign key.
+
+Share one `assertXInScope()` helper across every mutator so the list and the
+mutators cannot drift, and use the sibling page's refusal style (error toast +
+`return`) instead of inventing a 403. Order matters in `updateSchedule`:
+validate the record **and** the submitted unit, and `return` before any
+`$schedule->update(...)`.
+
+**Admin-only org-wide rows must be admin-only on write too.** If null-owner
+rows are visible to everyone but mutable only by an admin, then letting a
+scoped user create or promote one lets them write a record they can then
+neither edit nor delete — and hand themselves an org-wide side effect through a
+scoped form. Gate the write path on the same rule; keep the "no unit" option
+in the picker so existing org-wide rows stay viewable.
+
+8. **A package-registered route cannot be toggled off — strip it on `booted`, from inside a booted hook.** UI packages that call `loadRoutesFrom()` in their own `boot()` (maryUI does this) register routes the application never declared and cannot undeclare through config. Remove them by name from the router in `AppServiceProvider::boot()`. See "Removing a package-registered route" below — the two subtleties (compiled collections, hook ordering) each make the naive version silently do nothing.
+9. **A full-suite failure that passes in isolation is shared state, not your diff.** Do not assume it is yours, and do not "fix" it. Reproduce on the default branch with the same seed: `git stash push --include-untracked`, run, `git stash pop`. Note that adding or removing test files changes the execution order a seed produces, so "same seed passed on beta" is only comparable when the file set is identical. Report an unrooted flake by name in the PR body rather than silently rerunning until green.
+
+## Removing a package-registered route
+
+A vendor package's `ServiceProvider::boot()` calling `loadRoutesFrom()` registers
+routes the app never declared, and no config flag removes them. Strip by route
+name from the router instead:
+
+```php
+$this->app->booted(function () {
+    // Registered from INSIDE a booted callback — see below.
+    $this->app->booted(fn () => VendorRouteGuard::strip(
+        $this->app->make(Router::class),
+        'vendor.package.route'
+    ));
+});
+```
+
+Two traps make the obvious version a silent no-op:
+
+- **`route:cache` makes mutating a Route useless.** Cached routes produce a `CompiledRouteCollection` whose `match()` reads a flat, pre-built index and whose Route objects are instantiated fresh from `$attributes` on *every* call. Editing one changes nothing about what matches. Rebuild the collection without the target and re-`compile()` it, which regenerates both halves of `setCompiledRoutes()`. Handle both collection shapes (`RouteCollection` and `CompiledRouteCollection`) in the guard — the uncached rebuild is a few lines, but the cached path is the one that gets skipped and the bug ships.
+- **A hook registered straight from `boot()` runs too early.** Routes are themselves populated by booted callbacks (`AppRouteServiceProvider`, plus the `require` of the cached route file), so your hook can fire before the vendor route exists. `Application::fireAppCallbacks()` re-checks the callback count each pass, so nesting one `booted()` inside another is what places yours last on both the cached and uncached paths.
+
+Test all three states, not just the default one: uncached, freshly
+`route:cache`d, and a **stale cache built by the pre-fix code** (build it by
+stashing the fix, then `route:cache`). The stale case is the one that
+represents an already-deployed app, and it is the only one that proves the
+hook ordering. Verify with `php artisan route:list --path=<uri>` under each.
+
+Keep the package's *other* routes. A layout component calling
+`route('vendor.package.other')` on every render means removing it 500s every
+page — check the routes against actual view usage before stripping, and pin the
+survivors in a test so a later "cleanup" does not take them.
+
+## Testing Patterns
+
+See `references/testing-pitfalls.md` for the full decision table on
+assertion patterns, factory creation, scope/fixture traps, and E2E test
+structure.
