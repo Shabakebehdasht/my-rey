@@ -217,3 +217,14 @@ session_reset:
 # fallback_model:
 #   provider: openrouter
 #   model: anthropic/claude-sonnet-4
+bot_peers:
+  candle:
+    url: http://candle:8642
+  kimya:
+    url: http://kimya:8642
+  kylie:
+    url: http://kylie:8642
+  reyhane:
+    url: http://reyhane:8642
+  sevda:
+    url: http://sevda:8642
